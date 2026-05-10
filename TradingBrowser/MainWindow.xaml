@@ -8,7 +8,7 @@
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown"
         MouseMove="MainWindow_MouseMove"
-        FontFamily="Segoe UI">
+        FontFamily="Segoe UI"> <!-- Clean Windows Font for UI -->
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0" CornerRadius="0" ResizeBorderThickness="6"/>
@@ -24,10 +24,10 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" MaxHeight="34"/> <!-- Tabs (Collapses in Chart Mode) -->
-            <RowDefinition Height="Auto" MaxHeight="40"/> <!-- Address (Collapses in Chart Mode) -->
+            <RowDefinition Height="Auto" MaxHeight="34"/>
+            <RowDefinition Height="Auto" MaxHeight="40"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/> <!-- Download Shelf -->
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- 1. Tab Strip -->
@@ -61,7 +61,9 @@
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <Image Grid.Column="0" Source="{Binding Favicon}" Margin="8,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="TabText" Grid.Column="1" Text="{Binding Title}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="#e8eaed" FontSize="12"/>
-                                        <Button x:Name="CloseBtn" Grid.Column="2" Content="✕" FontSize="10" Width="16" Height="16" Margin="4,0,6,0" VerticalAlignment="Center" Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <!-- FIX: Pure White Close Button -->
+                                        <Button x:Name="CloseBtn" Grid.Column="2" Content="✕" FontSize="11" Width="16" Height="16" Margin="4,0,6,0" VerticalAlignment="Center"
+                                                Foreground="White" Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     </Grid>
                                 </Border>
                                 <DataTemplate.Triggers>
@@ -87,23 +89,18 @@
                 Visibility="{Binding IsChartMode, Converter={StaticResource BoolVis}, ConverterParameter=Invert}">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                
                 <StackPanel Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
                     <Button Content="←" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
                     <Button Content="→" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
                     <Button x:Name="ReloadBtn" Content="↻" Width="28" Height="28" Foreground="#9aa0a6" FontSize="13" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
                 </StackPanel>
-
                 <Border Grid.Column="1" Background="#35363A" CornerRadius="24" Height="32" VerticalAlignment="Center">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <!-- Ad-Block Shield -->
                         <Button Grid.Column="0" Content="{Binding ShieldIcon}" FontSize="14" Margin="8,0,0,0" Background="Transparent" BorderThickness="0" Cursor="Hand" Command="{Binding ToggleShieldCommand}" VerticalAlignment="Center" ToolTip="Toggle Ad-Blocker for this site"/>
                         <TextBox x:Name="AddressBox" Grid.Column="1" Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="6,0,10,0" Background="Transparent" BorderThickness="0" Foreground="#e8eaed" FontSize="14" CaretBrush="#e8eaed" KeyDown="AddressBox_KeyDown"/>
                     </Grid>
                 </Border>
-
-                <!-- Settings & Chart Mode Buttons -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
                     <Button Content="Fullscreen" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Command="{Binding ToggleChartModeCommand}" ToolTip="Chart Mode (F11)"/>
                     <Button Content="⚙️" Width="28" Height="28" Background="Transparent" BorderThickness="0" Cursor="Hand" Command="{Binding OpenSettingsCommand}" ToolTip="Settings"/>
@@ -111,7 +108,6 @@
             </Grid>
         </Border>
 
-        <!-- 3. WebViews -->
         <Grid Grid.Row="2" x:Name="ActiveWebViewHost" Background="#202124"/>
 
         <!-- 4. Download Manager Shelf -->
@@ -120,12 +116,8 @@
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Collapsed"/>
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding Downloads.Count}" Value="0">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Downloads.Count}" Value="1">
-                            <Setter Property="Visibility" Value="Visible"/>
-                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Downloads.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                        <DataTrigger Binding="{Binding Downloads.Count}" Value="1"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Border.Style>
@@ -134,10 +126,7 @@
                     <DataTemplate>
                         <Border Background="#35363A" CornerRadius="4" Padding="8" Margin="0,4,0,4" Height="40">
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding FileName}" Foreground="White" FontSize="12" TextTrimming="CharacterEllipsis"/>
                                     <ProgressBar Height="4" Margin="0,4,0,0" Foreground="#8ab4f8" Background="#202124" Minimum="0" Maximum="100" Value="{Binding Progress}"/>
