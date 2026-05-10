@@ -37,10 +37,22 @@ namespace TradingBrowser
 
             ViewModel.RequestNavigate += ViewModel_RequestNavigate;
             ViewModel.RequestFocusAddressBar += () => { AddressBox.Focus(); AddressBox.SelectAll(); };
+            ViewModel.TabClosed += ViewModel_TabClosed; // NEW: Listen for tab closes
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             _isInitialized = true;
             RestoreSession();
+        }
+
+        // NEW: When a tab is closed, completely destroy its WebView2 process to free RAM and stop audio
+        private void ViewModel_TabClosed(TabViewModel tab)
+        {
+            if (_webViewPool.TryGetValue(tab.Id, out var webView))
+            {
+                ActiveWebViewHost.Children.Remove(webView);
+                webView.Dispose(); // This kills the background renderer process completely
+                _webViewPool.Remove(tab.Id);
+            }
         }
 
         protected override void OnClosed(EventArgs e)
@@ -131,8 +143,6 @@ namespace TradingBrowser
 
                 _webViewPool[tab.Id] = webView;
 
-                // FIX: Wait 50ms to let WebView2 establish its network pipes before requesting a URL.
-                // This prevents "Unable to connect" on session restore.
                 await System.Threading.Tasks.Task.Delay(50);
 
                 if (tab.Url == "homemarket://")
@@ -141,8 +151,19 @@ namespace TradingBrowser
                     webView.CoreWebView2.Navigate(tab.Url);
             }
 
-            foreach (var wv in _webViewPool.Values) wv.Visibility = Visibility.Hidden;
-            if (_webViewPool.TryGetValue(tab.Id, out var targetWebView)) targetWebView.Visibility = Visibility.Visible;
+            // CRITICAL FIX: Use WebView2's native IsVisible instead of WPF Visibility.
+            // This freezes JS, mutes audio, and saves RAM, BUT keeps the network connection alive!
+            foreach (var wv in _webViewPool.Values)
+            {
+                if (wv.CoreWebView2Controller != null)
+                    wv.CoreWebView2Controller.IsVisible = false;
+            }
+
+            if (_webViewPool.TryGetValue(tab.Id, out var targetWebView))
+            {
+                if (targetWebView.CoreWebView2Controller != null)
+                    targetWebView.CoreWebView2Controller.IsVisible = true;
+            }
         }
 
         private void LoadHomePage(Microsoft.Web.WebView2.Wpf.WebView2 webView)
@@ -196,8 +217,6 @@ namespace TradingBrowser
             if (e.Key == Key.Enter) 
             { 
                 ViewModel.ExecuteNavigate(); 
-                // FIX: Removed MoveFocus. Forcing focus away from the text box while WebView2 
-                // is navigating causes the network request to abort in WPF.
                 e.Handled = true;
             }
         }
