@@ -39,8 +39,9 @@ namespace TradingBrowser
             ViewModel.RequestFocusAddressBar += () => { AddressBox.Focus(); AddressBox.SelectAll(); };
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
-            RestoreSession();
+            // FIX: Tell the app it is ready to load WebViews BEFORE restoring the session
             _isInitialized = true;
+            RestoreSession();
         }
 
         protected override void OnClosed(EventArgs e)
