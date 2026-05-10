@@ -1,9 +1,15 @@
 <Window x:Class="TradingBrowser.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:TradingBrowser.ViewModels"
         Title="TradingBrowser" Height="800" Width="1200"
         Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
-        WindowStyle="None" AllowsTransparency="False" ResizeMode="CanResize">
+        WindowStyle="None" AllowsTransparency="False" ResizeMode="CanResize"
+        Loaded="Window_Loaded">
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -13,15 +19,13 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Custom Title Bar -->
+        <!-- 1. Title Bar -->
         <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                <TextBlock Text="TradingBrowser" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-            </StackPanel>
+            <TextBlock Text="TradingBrowser" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="─" Width="46" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click"/>
                 <Button Content="☐" Width="46" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click"/>
@@ -29,32 +33,57 @@
             </StackPanel>
         </Grid>
 
-        <!-- Tab Strip Placeholder -->
+        <!-- 2. Tab Strip (Now Data Bound to MVVM) -->
         <Border Grid.Row="1" Height="36" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <StackPanel Orientation="Horizontal">
-                <Button Content="+" Width="36" Height="36" FontWeight="Bold" Style="{StaticResource CaptionButtonStyle}"/>
+                <ItemsControl ItemsSource="{Binding Tabs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeHighBrush}" 
+                                    Margin="2,4,0,4" CornerRadius="6,6,0,0" 
+                                    Width="200" Height="28" 
+                                    VerticalAlignment="Bottom"
+                                    MouseLeftButtonDown="Tab_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <Button Grid.Column="1" Content="✕" FontSize="10" Width="20" Height="20" 
+                                            Style="{StaticResource CaptionButtonStyle}" 
+                                            Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                            CommandParameter="{Binding}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <Button Content="+" Width="36" Height="36" FontWeight="Bold" Style="{StaticResource CaptionButtonStyle}" 
+                        Command="{Binding AddTabCommand}"/>
             </StackPanel>
         </Border>
 
-        <!-- Address Bar -->
+        <!-- 3. Address Bar -->
         <Border Grid.Row="2" Height="40" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" Margin="0,0,8,0">
-                    <Button Content="←" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}"/>
-                    <Button Content="→" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}"/>
-                    <Button Content="↻" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}"/>
-                </StackPanel>
-                <Border Grid.Column="1" Background="{DynamicResource SystemControlBackgroundChromeHighBrush}" CornerRadius="4" Height="32">
-                    <TextBlock Text="Search or enter URL..." VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
-                </Border>
+                <TextBlock Grid.Column="1" Text="{Binding SelectedTab.Url}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
             </Grid>
         </Border>
 
-        <!-- WebView2 Host Area -->
-        <Border Grid.Row="3" x:Name="WebViewContainer"/>
+        <!-- 4. Active WebView Host -->
+        <ContentControl Grid.Row="3" x:Name="ActiveWebViewHost"/>
+        
+        <!-- Hidden Pool: Keeps background tabs alive so they don't discard instantly -->
+        <Grid Grid.Row="3" x:Name="HiddenWebViewPool" Visibility="Collapsed"/>
     </Grid>
 </Window>
