@@ -41,7 +41,9 @@ namespace TradingBrowser.ViewModels
         public event Action<TabViewModel>? TabClosed;
         public event Action<TabViewModel>? TabPopOut;
         public event Action<TabViewModel>? TabScreenshot;
-        public event Action? ClearCacheRequested;
+        
+        // FIX: Changed to Action to eliminate compiler warning
+        public Action? ClearCacheRequested { get; set; }
 
         private readonly Stack<TabViewModel> _closedTabs = new Stack<TabViewModel>();
 
@@ -75,7 +77,6 @@ namespace TradingBrowser.ViewModels
             ScreenshotCommand = new RelayCommand(param => { if (param is TabViewModel t) TabScreenshot?.Invoke(t); });
             ToggleShieldCommand = new RelayCommand(_ => ToggleShield());
             
-            // FIX: Don't open new tab if settings is already open
             OpenSettingsCommand = new RelayCommand(_ => 
             {
                 var existing = Tabs.FirstOrDefault(t => t.Url == "settings://");
