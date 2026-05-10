@@ -6,7 +6,6 @@ namespace TradingBrowser.Services
 {
     public class AdBlockService
     {
-        // HashSet provides O(1) lookup time, easily hitting the <0.5ms spec requirement
         private static readonly HashSet<string> BlockedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "doubleclick.net", "googlesyndication.com", "googleadservices.com",
@@ -33,16 +32,17 @@ namespace TradingBrowser.Services
             {
                 if (host.Contains(blocked))
                 {
-                    // To block in C# WebView2, we create a fake empty 204 response
-                    var coreWebView = (CoreWebView2)sender;
-                    e.Response = coreWebView.Environment.CreateWebResourceResponse(
-                        null,       // No content body
-                        204,        // HTTP 204 No Content
-                        "No Content", 
-                        ""          // No headers
-                    );
-                    
-                    BlockedCount++;
+                    // Safely cast and check for null (fixes warnings)
+                    if (sender is CoreWebView2 coreWebView)
+                    {
+                        e.Response = coreWebView.Environment.CreateWebResourceResponse(
+                            null,       
+                            204,        
+                            "No Content", 
+                            ""          
+                        );
+                        BlockedCount++;
+                    }
                     return;
                 }
             }
