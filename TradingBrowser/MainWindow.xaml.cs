@@ -39,7 +39,6 @@ namespace TradingBrowser
             ViewModel.RequestFocusAddressBar += () => { AddressBox.Focus(); AddressBox.SelectAll(); };
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
-            // FIX: Tell the app it is ready to load WebViews BEFORE restoring the session
             _isInitialized = true;
             RestoreSession();
         }
@@ -82,7 +81,7 @@ namespace TradingBrowser
                 }
                 catch { }
             }
-            ViewModel.AddTab(); // Fallback to default homepage
+            ViewModel.AddTab();
         }
 
         private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -103,7 +102,6 @@ namespace TradingBrowser
 
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => tab.Title = webView.CoreWebView2.DocumentTitle;
                 
-                // FEATURE: Always show website icon in tabs
                 webView.CoreWebView2.FaviconChanged += async (_, _) =>
                 {
                     try 
@@ -114,7 +112,7 @@ namespace TradingBrowser
                         bitmap.StreamSource = stream;
                         bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
                         bitmap.EndInit();
-                        bitmap.Freeze(); // Freeze so it can be passed to UI thread safely
+                        bitmap.Freeze();
                         tab.Favicon = bitmap; 
                     } 
                     catch { }
@@ -125,29 +123,30 @@ namespace TradingBrowser
                     if (ViewModel.SelectedTab?.Id == tab.Id) ViewModel.AddressBarText = webView.Source.ToString();
                 };
 
-                // Handle our custom homepage protocol
                 webView.CoreWebView2.WebMessageReceived += (s, args) =>
                 {
                     var url = args.TryGetWebMessageAsString();
                     if (!string.IsNullOrEmpty(url)) ViewModel_RequestNavigate(tab, url);
                 };
 
+                _webViewPool[tab.Id] = webView;
+
+                // FIX: Wait 50ms to let WebView2 establish its network pipes before requesting a URL.
+                // This prevents "Unable to connect" on session restore.
+                await System.Threading.Tasks.Task.Delay(50);
+
                 if (tab.Url == "homemarket://")
                     LoadHomePage(webView);
                 else
                     webView.CoreWebView2.Navigate(tab.Url);
-
-                _webViewPool[tab.Id] = webView;
             }
 
-            // Hide all, show active (keeps background network alive)
             foreach (var wv in _webViewPool.Values) wv.Visibility = Visibility.Hidden;
             if (_webViewPool.TryGetValue(tab.Id, out var targetWebView)) targetWebView.Visibility = Visibility.Visible;
         }
 
         private void LoadHomePage(Microsoft.Web.WebView2.Wpf.WebView2 webView)
         {
-            // FEATURE: Default homepage with Indian brokers and search
             string html = @"
             <html><head><style>
                 body { background-color: #1e1e1e; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 15%; }
@@ -197,11 +196,12 @@ namespace TradingBrowser
             if (e.Key == Key.Enter) 
             { 
                 ViewModel.ExecuteNavigate(); 
-                ((TextBox)sender).MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)); 
+                // FIX: Removed MoveFocus. Forcing focus away from the text box while WebView2 
+                // is navigating causes the network request to abort in WPF.
+                e.Handled = true;
             }
         }
 
-        // FEATURE: Chrome Keyboard Shortcuts
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.T) { ViewModel.AddTab(); e.Handled = true; }
