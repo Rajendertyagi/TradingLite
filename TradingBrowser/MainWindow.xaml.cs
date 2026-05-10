@@ -30,7 +30,6 @@ namespace TradingBrowser
             string args = "--disable-background-timer-throttling --disable-renderer-backgrounding --enable-gpu-rasterization";
             _environment = await CoreWebView2Environment.CreateAsync(null, folder, new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = args });
 
-            // Listen for MVVM Navigation Requests
             ViewModel.RequestNavigate += ViewModel_RequestNavigate;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
@@ -54,10 +53,7 @@ namespace TradingBrowser
 
                 _adBlocker.AttachToWebView(webView.CoreWebView2);
 
-                // Update MVVM Title
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => tab.Title = webView.CoreWebView2.DocumentTitle;
-                
-                // Update MVVM Address Bar when navigation completes
                 webView.CoreWebView2.SourceChanged += (_, _) => 
                 {
                     if (ViewModel.SelectedTab?.Id == tab.Id)
@@ -76,7 +72,13 @@ namespace TradingBrowser
             ActiveWebViewHost.Content = targetWebView;
         }
 
-        // Handle Navigation from ViewModel
+        // THIS IS THE MISSING METHOD:
+        private void Tab_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab)
+                ViewModel.SelectedTab = tab;
+        }
+
         private void ViewModel_RequestNavigate(TabViewModel tab, string url)
         {
             if (_webViewPool.TryGetValue(tab.Id, out var webView))
@@ -86,18 +88,15 @@ namespace TradingBrowser
             }
         }
 
-        // Handle Enter key in TextBox
         private void AddressBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
                 ViewModel.ExecuteNavigate();
-                // Remove focus from textbox so keyboard shortcuts work in TradingView
                 ((TextBox)sender).MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)); 
             }
         }
 
-        // Navigation Buttons
         private void Back_Click(object sender, RoutedEventArgs e)
         {
             if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) 
@@ -116,7 +115,6 @@ namespace TradingBrowser
                 wv.CoreWebView2.Reload();
         }
 
-        // Window Chrome Interop
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, int lParam);
         private const int WM_SYSCOMMAND = 0x0112, SC_MAXIMIZE = 0xF030, SC_MINIMIZE = 0xF020;
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); }
