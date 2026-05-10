@@ -78,11 +78,23 @@ namespace TradingBrowser
 
         private void ViewModel_TabClosed(TabViewModel tab) { if (_webViewPool.TryGetValue(tab.Id, out var webView)) { try { ActiveWebViewHost.Children.Remove(webView); webView.Dispose(); } catch { } _webViewPool.Remove(tab.Id); } }
 
-        protected override void OnClosed(EventArgs e) { try { SaveSession(); } catch { } base.OnClosed(e); }
+        protected override void OnClosed(EventArgs e) { try { /* Intentionally NOT saving session */ } catch { } base.OnClosed(e); }
 
-        private void SaveSession() { try { var sessionData = new List<string>(); foreach (var tab in ViewModel.Tabs) { try { if (_webViewPool.TryGetValue(tab.Id, out var wv)) sessionData.Add(wv.Source?.ToString() ?? tab.Url); else if (tab.Url != "homemarket://" && tab.Url != "settings://") sessionData.Add(tab.Url); } catch { } } File.WriteAllText(_sessionPath, JsonSerializer.Serialize(sessionData)); } catch { } }
+        private void SaveSession() { /* Intentionally left empty so we don't save state */ }
 
-        private void RestoreSession() { if (File.Exists(_sessionPath)) { try { var urls = JsonSerializer.Deserialize<List<string>>(File.ReadAllText(_sessionPath)); if (urls != null && urls.Count > 0) { foreach (var url in urls) ViewModel.AddTab(url); return; } } catch { } } ViewModel.AddTab(); }
+        private void RestoreSession()
+        {
+            // Delete old session cache if it exists so we don't leave orphaned files
+            try 
+            { 
+                if (File.Exists(_sessionPath)) 
+                    File.Delete(_sessionPath); 
+            } 
+            catch { }
+            
+            // Always open a single fresh tab, completely ignoring saved URLs
+            ViewModel.AddTab("homemarket://");
+        }
 
         private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) { if (e.PropertyName == nameof(ViewModel.SelectedTab) && ViewModel.SelectedTab != null && _isInitialized) { await ActivateTab(ViewModel.SelectedTab); ViewModel.IsSiteWhitelisted = _adBlocker.IsDomainWhitelisted(ViewModel.SelectedTab.Url); } }
 
@@ -142,14 +154,12 @@ namespace TradingBrowser
                 
                 webView.CoreWebView2.NewWindowRequested += (s, args) => { try { args.Handled = true; ViewModel.AddTab(args.Uri); } catch { } };
 
-                // ULTRA-BULLETPROOF DOWNLOAD HANDLER
                 webView.CoreWebView2.DownloadStarting += (s, args) =>
                 {
                     try
                     {
                         var download = args.DownloadOperation;
                         
-                        // If WebView2 gives us a valid file path, try to track it
                         if (download != null && !string.IsNullOrEmpty(download.ResultFilePath))
                         {
                             string filePath = download.ResultFilePath;
@@ -172,13 +182,11 @@ namespace TradingBrowser
                         else
                         {
                             // If ResultFilePath is null (Blob/Script downloads), completely ignore the download tracking.
-                            // Just let Windows/Edge handle it using its native Save dialog.
                         }
                     }
                     catch (Exception ex)
                     {
                         // If tracking the download crashes for ANY reason, just ignore it so the browser doesn't die.
-                        // Don't set args.Handled = true, so WebView2 will just fall back to native downloading.
                     }
                 };
 
@@ -258,7 +266,7 @@ namespace TradingBrowser
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, int lParam);
         private const int WM_SYSCOMMAND = 0x0112, SC_MAXIMIZE = 0xF030, SC_MINIMIZE = 0xF020;
         private void Minimize_Click(object sender, RoutedEventArgs e) => SendMessage(new System.Windows.Interop.WindowInteropHelper(this).Handle, WM_SYSCOMMAND, SC_MINIMIZE, 0);
-        private void Maximize_Click(object sender, RoutedEventArgs e) => SendMessage(new System.Windows.Interop.WindowInteropHelper(this).Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+        private void Maximize_Click(object sender, RoutedEventArgs e) => SendMessage(new System.Windows.InteropWindowInteropHelper(this).Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
     }
 }
