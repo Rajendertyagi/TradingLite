@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 
 namespace TradingBrowser.ViewModels
 {
@@ -22,11 +23,11 @@ namespace TradingBrowser.ViewModels
             set { _url = value; OnPropertyChanged(); } 
         }
 
-        private string _faviconUrl = "";
-        public string FaviconUrl 
+        private ImageSource? _favicon;
+        public ImageSource? Favicon 
         { 
-            get => _faviconUrl; 
-            set { _faviconUrl = value; OnPropertyChanged(); } 
+            get => _favicon; 
+            set { _favicon = value; OnPropertyChanged(); } 
         }
 
         private bool _isPinned;
