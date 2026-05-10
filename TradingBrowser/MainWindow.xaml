@@ -34,7 +34,32 @@
                     <ItemsControl ItemsSource="{Binding Tabs}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#35363A" Margin="4,6,0,4" CornerRadius="8,8,0,0" Width="200" Height="26" VerticalAlignment="Bottom" MouseLeftButtonDown="Tab_Click">
+                                <Border x:Name="TabBorder" Background="#35363A" Margin="4,6,0,4" CornerRadius="8,8,0,0" 
+                                        Width="200" Height="26" VerticalAlignment="Bottom" 
+                                        MouseLeftButtonDown="Tab_Click"
+                                        PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"
+                                        MouseMove="Tab_MouseMove"
+                                        DragOver="Tab_DragOver"
+                                        Drop="Tab_Drop"
+                                        AllowDrop="True">
+                                    
+                                    <Border.ContextMenu>
+                                        <ContextMenu Background="#2D2D2D" Foreground="White">
+                                            <MenuItem Header="Reload" Command="{Binding DataContext.ReloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" InputGestureText="Ctrl+R"/>
+                                            <MenuItem Header="Duplicate" Command="{Binding DataContext.DuplicateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Pin Tab" Command="{Binding DataContext.PinTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <Separator/>
+                                            <MenuItem Header="📸 Screenshot Tab" Command="{Binding DataContext.ScreenshotCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <MenuItem Header="📊 Pop-out Chart (Always on Top)" Command="{Binding DataContext.PopOutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Close other tabs" Command="{Binding DataContext.CloseOtherTabsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <MenuItem Header="Close tabs to the right" Command="{Binding DataContext.CloseRightTabsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Close" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" InputGestureText="Ctrl+W"/>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -42,12 +67,19 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         
-                                        <!-- FAVICON IMAGE -->
                                         <Image Grid.Column="0" Source="{Binding Favicon}" Margin="6,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="White"/>
-                                        <Button Grid.Column="2" Content="✕" FontSize="10" Width="20" Height="20" Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <TextBlock x:Name="TabText" Grid.Column="1" Text="{Binding Title}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="White"/>
+                                        <Button x:Name="CloseBtn" Grid.Column="2" Content="✕" FontSize="10" Width="20" Height="20" Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     </Grid>
+
+                                    <!-- Pin Tab UI Logic -->
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                            <Setter TargetName="TabBorder" Property="Width" Value="40"/>
+                                            <Setter TargetName="TabText" Property="Visibility" Value="Collapsed"/>
+                                            <Setter TargetName="CloseBtn" Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -75,9 +107,9 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" Margin="0,0,8,0">
+                    <Button x:Name="ReloadBtn" Content="↻" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
                     <Button Content="←" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
                     <Button Content="→" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
-                    <Button Content="↻" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
                 </StackPanel>
                 <Border Grid.Column="1" Background="#202124" CornerRadius="6" Height="32">
                     <TextBox x:Name="AddressBox" Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="10,0,0,0" Background="Transparent" BorderThickness="0" Foreground="White" CaretBrush="White" KeyDown="AddressBox_KeyDown"/>
@@ -87,6 +119,5 @@
 
         <!-- 3. WebViews -->
         <Grid Grid.Row="2" x:Name="ActiveWebViewHost" Background="#202124"/>
-        
     </Grid>
 </Window>
