@@ -23,6 +23,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- 1. Tab Strip -->
         <Border Grid.Row="0" Background="#202124" MouseLeftButtonDown="TabStrip_MouseLeftButtonDown">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -42,7 +43,7 @@
                                         </Grid.ColumnDefinitions>
                                         
                                         <!-- FAVICON IMAGE -->
-                                        <Image Grid.Column="0" Source="{Binding FaviconUrl}" Margin="6,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        <Image Grid.Column="0" Source="{Binding Favicon}" Margin="6,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
                                         
                                         <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="White"/>
                                         <Button Grid.Column="2" Content="✕" FontSize="10" Width="20" Height="20" Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
@@ -66,6 +67,7 @@
             </Grid>
         </Border>
 
+        <!-- 2. Address Bar -->
         <Border Grid.Row="1" Height="40" Background="#35363A" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -83,6 +85,8 @@
             </Grid>
         </Border>
 
+        <!-- 3. WebViews -->
         <Grid Grid.Row="2" x:Name="ActiveWebViewHost" Background="#202124"/>
+        
     </Grid>
 </Window>
