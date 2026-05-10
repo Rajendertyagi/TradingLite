@@ -17,6 +17,7 @@ namespace TradingBrowser
         private readonly Dictionary<Guid, Microsoft.Web.WebView2.Wpf.WebView2> _webViewPool = new();
         private readonly AdBlockService _adBlocker = new AdBlockService();
         private CoreWebView2Environment? _environment;
+        private bool _isInitialized = false;
 
         public MainWindow()
         {
@@ -25,20 +26,39 @@ namespace TradingBrowser
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser");
-            Directory.CreateDirectory(folder);
-            string args = "--disable-background-timer-throttling --disable-renderer-backgrounding --enable-gpu-rasterization";
-            _environment = await CoreWebView2Environment.CreateAsync(null, folder, new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = args });
+            try
+            {
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser");
+                Directory.CreateDirectory(folder);
+                
+                // Safely initialize WebView2 Environment
+                _environment = await CoreWebView2Environment.CreateAsync(null, folder, new CoreWebView2EnvironmentOptions 
+                { 
+                    AdditionalBrowserArguments = "--disable-background-timer-throttling --disable-renderer-backgrounding" 
+                });
 
-            ViewModel.RequestNavigate += ViewModel_RequestNavigate;
-            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+                ViewModel.RequestNavigate += ViewModel_RequestNavigate;
+                ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
-            if (ViewModel.SelectedTab != null) await ActivateTab(ViewModel.SelectedTab);
+                if (ViewModel.SelectedTab != null) await ActivateTab(ViewModel.SelectedTab);
+                
+                _isInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                // If WebView2 completely fails, show UI instead of black screen
+                ActiveWebViewHost.Content = new TextBlock 
+                { 
+                    Text = $"WebView2 Init Failed: {ex.Message}", 
+                    Foreground = System.Windows.Media.Brushes.Red,
+                    Margin = new Thickness(20)
+                };
+            }
         }
 
         private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ViewModel.SelectedTab) && ViewModel.SelectedTab != null)
+            if (e.PropertyName == nameof(ViewModel.SelectedTab) && ViewModel.SelectedTab != null && _isInitialized)
             {
                 await ActivateTab(ViewModel.SelectedTab);
             }
@@ -72,7 +92,6 @@ namespace TradingBrowser
             ActiveWebViewHost.Content = targetWebView;
         }
 
-        // THIS IS THE MISSING METHOD:
         private void Tab_Click(object sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab)
