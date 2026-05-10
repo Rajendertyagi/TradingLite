@@ -149,7 +149,6 @@ namespace TradingBrowser
 
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { try { tab.Title = webView.CoreWebView2.DocumentTitle; } catch { } }); };
                 
-                // FIX: Changed (_) to (_, _) because the event requires two parameters!
                 webView.CoreWebView2.FaviconChanged += async (_, _) => 
                 { 
                     try 
@@ -161,11 +160,7 @@ namespace TradingBrowser
                         bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; 
                         bitmap.EndInit(); 
                         bitmap.Freeze(); 
-                        
-                        Application.Current.Dispatcher.Invoke(() => 
-                        { 
-                            try { tab.Favicon = bitmap; } catch { } 
-                        }); 
+                        Application.Current.Dispatcher.Invoke(() => { try { tab.Favicon = bitmap; } catch { } }); 
                     } 
                     catch { } 
                 };
@@ -179,7 +174,7 @@ namespace TradingBrowser
                 {
                     var download = args.DownloadOperation;
                     var item = new DownloadItem { FileName = Path.GetFileName(download.ResultFilePath), FilePath = download.ResultFilePath };
-                    download.BytesReceivedChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { item.BytesReceived = download.BytesReceived; item.TotalBytes = download.TotalBytesToReceive; }); };
+                    download.BytesReceivedChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { item.BytesReceived = (long)download.BytesReceived; item.TotalBytes = (long)(download.TotalBytesToReceive ?? 0); }); };
                     download.StateChanged += (_, _) => { if (download.State == CoreWebView2DownloadState.Completed || download.State == CoreWebView2DownloadState.Interrupted) Application.Current.Dispatcher.Invoke(() => item.IsComplete = true); };
                     Application.Current.Dispatcher.Invoke(() => ViewModel.Downloads.Add(item));
                 };
