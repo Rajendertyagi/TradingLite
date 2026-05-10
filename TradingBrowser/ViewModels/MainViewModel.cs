@@ -49,8 +49,8 @@ namespace TradingBrowser.ViewModels
         public ICommand PopOutCommand { get; }
         public ICommand ScreenshotCommand { get; }
         
-        // Exposed for Context Menu
-        public ICommand ReloadCommand { get; set; }
+        // FIX: Initialize with empty command to prevent CS8618 warning
+        public ICommand ReloadCommand { get; set; } = new RelayCommand(_ => { });
 
         public MainViewModel()
         {
@@ -60,12 +60,13 @@ namespace TradingBrowser.ViewModels
             CloseTabCommand = new RelayCommand(param => CloseTab(param as TabViewModel));
             UndoCloseTabCommand = new RelayCommand(_ => UndoCloseTab());
             
-            PinTabCommand = new RelayCommand(param => TogglePin(param as TabViewModel));
-            DuplicateTabCommand = new RelayCommand(param => DuplicateTab(param as TabViewModel));
-            CloseOtherTabsCommand = new RelayCommand(param => CloseOthers(param as TabViewModel));
-            CloseRightTabsCommand = new RelayCommand(param => CloseRight(param as TabViewModel));
-            PopOutCommand = new RelayCommand(param => TabPopOut?.Invoke(param as TabViewModel));
-            ScreenshotCommand = new RelayCommand(param => TabScreenshot?.Invoke(param as TabViewModel));
+            // FIX: Safely check for null before invoking to prevent CS8604 warnings
+            PinTabCommand = new RelayCommand(param => { if (param is TabViewModel t) TogglePin(t); });
+            DuplicateTabCommand = new RelayCommand(param => { if (param is TabViewModel t) DuplicateTab(t); });
+            CloseOtherTabsCommand = new RelayCommand(param => { if (param is TabViewModel t) CloseOthers(t); });
+            CloseRightTabsCommand = new RelayCommand(param => { if (param is TabViewModel t) CloseRight(t); });
+            PopOutCommand = new RelayCommand(param => { if (param is TabViewModel t) TabPopOut?.Invoke(t); });
+            ScreenshotCommand = new RelayCommand(param => { if (param is TabViewModel t) TabScreenshot?.Invoke(t); });
         }
 
         public void AddTab(string url = "homemarket://")
@@ -94,12 +95,11 @@ namespace TradingBrowser.ViewModels
             }
         }
 
-        private void TogglePin(TabViewModel? tab) { if(tab != null) tab.IsPinned = !tab.IsPinned; }
-        private void DuplicateTab(TabViewModel? tab) { if(tab != null) AddTab(tab.Url); }
+        private void TogglePin(TabViewModel tab) { tab.IsPinned = !tab.IsPinned; }
+        private void DuplicateTab(TabViewModel tab) { AddTab(tab.Url); }
 
-        private void CloseOthers(TabViewModel? tab)
+        private void CloseOthers(TabViewModel tab)
         {
-            if (tab == null) return;
             var others = Tabs.Where(t => t.Id != tab.Id).ToList();
             foreach(var t in others) TabClosed?.Invoke(t);
             Tabs.Clear();
@@ -107,9 +107,8 @@ namespace TradingBrowser.ViewModels
             SelectedTab = tab;
         }
 
-        private void CloseRight(TabViewModel? tab)
+        private void CloseRight(TabViewModel tab)
         {
-            if (tab == null) return;
             int index = Tabs.IndexOf(tab);
             var rightTabs = Tabs.Skip(index + 1).ToList();
             foreach(var t in rightTabs) TabClosed?.Invoke(t);
