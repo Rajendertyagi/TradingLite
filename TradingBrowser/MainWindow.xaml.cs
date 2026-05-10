@@ -96,7 +96,6 @@ namespace TradingBrowser
 
                 _adBlocker.AttachToWebView(webView.CoreWebView2);
 
-                // FEATURE: Force Google Sans/Inter font on ALL websites
                 await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
                     (function() {
                         let link = document.createElement('link');
@@ -113,7 +112,6 @@ namespace TradingBrowser
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { try { tab.Title = webView.CoreWebView2.DocumentTitle; } catch { } }); };
                 webView.CoreWebView2.FaviconChanged += async (_, _) => { try { var stream = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png); var bitmap = new System.Windows.Media.Imaging.BitmapImage(); bitmap.BeginInit(); bitmap.StreamSource = stream; bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bitmap.EndInit(); bitmap.Freeze(); Application.Current.Dispatcher.Invoke(() => { try { tab.Favicon = bitmap; } catch { } }); } catch { } };
                 
-                // CRITICAL FIX: Sync tab.Url and Address Bar without race conditions
                 webView.CoreWebView2.SourceChanged += (_, _) => 
                 { 
                     Application.Current.Dispatcher.Invoke(() => 
@@ -123,10 +121,7 @@ namespace TradingBrowser
                             var currentUrl = webView.Source?.ToString();
                             if (!string.IsNullOrEmpty(currentUrl))
                             {
-                                // ALWAYS keep internal URL synced (fixes Duplicate Tab bug)
                                 tab.Url = currentUrl; 
-                                
-                                // ONLY update visual Address Bar if user isn't typing in it
                                 if (ViewModel.SelectedTab?.Id == tab.Id && !AddressBox.IsKeyboardFocused)
                                     ViewModel.AddressBarText = currentUrl;
                             }
@@ -147,7 +142,52 @@ namespace TradingBrowser
                 
                 webView.CoreWebView2.NewWindowRequested += (s, args) => { try { args.Handled = true; ViewModel.AddTab(args.Uri); } catch { } };
 
-                webView.CoreWebView2.DownloadStarting += (s, args) => { var download = args.DownloadOperation; var item = new DownloadItem { FileName = Path.GetFileName(download.ResultFilePath), FilePath = download.ResultFilePath }; download.BytesReceivedChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { item.BytesReceived = (long)download.BytesReceived; item.TotalBytes = (long)(download.TotalBytesToReceive ?? 0); }); }; download.StateChanged += (_, _) => { if (download.State == CoreWebView2DownloadState.Completed || download.State == CoreWebView2DownloadState.Interrupted) Application.Current.Dispatcher.Invoke(() => item.IsComplete = true); }; Application.Current.Dispatcher.Invoke(() => ViewModel.Downloads.Add(item)); };
+                // BULLETPROOF DOWNLOAD HANDLER
+                webView.CoreWebView2.DownloadStarting += (s, args) =>
+                {
+                    try
+                    {
+                        var download = args.DownloadOperation;
+                        
+                        // FIX: Check if ResultFilePath is null (happens on Blob downloads/scripts)
+                        string filePath = download.ResultFilePath;
+                        if (string.IsNullOrEmpty(filePath))
+                        {
+                            string downloadsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                            Directory.CreateDirectory(downloadsFolder);
+                            filePath = Path.Combine(downloadsFolder, "TradingBrowser_Download.temp");
+                        }
+
+                        var item = new DownloadItem 
+                        { 
+                            FileName = Path.GetFileName(filePath) ?? "Downloading...", 
+                            FilePath = filePath 
+                        };
+                        
+                        download.BytesReceivedChanged += (_, _) => 
+                        { 
+                            try { Application.Current?.Dispatcher.Invoke(() => { try { item.BytesReceived = (long)download.BytesReceived; item.TotalBytes = (long)(download.TotalBytesToReceive ?? 0); } catch { } }); } 
+                            catch { } 
+                        };
+                        
+                        download.StateChanged += (_, _) => 
+                        { 
+                            try 
+                            { 
+                                if (download.State == CoreWebView2DownloadState.Completed || download.State == CoreWebView2DownloadState.Interrupted) 
+                                    Application.Current?.Dispatcher.Invoke(() => { try { item.IsComplete = true; } catch { } }); 
+                            } 
+                            catch { } 
+                        };
+                        
+                        Application.Current?.Dispatcher.Invoke(() => { try { ViewModel.Downloads.Add(item); } catch { } });
+                    }
+                    catch (Exception ex)
+                    {
+                        // Silently fail downloads so the browser doesn't crash
+                        System.Diagnostics.Debug.WriteLine($"Download Error: {ex.Message}");
+                    }
+                };
 
                 if (tab.Url.Contains("tradingview.com"))
                 {
