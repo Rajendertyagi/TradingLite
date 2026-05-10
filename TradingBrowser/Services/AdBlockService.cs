@@ -20,7 +20,6 @@ namespace TradingBrowser.Services
 
         public void AttachToWebView(CoreWebView2 webView)
         {
-            // Spec: AddWebResourceRequestedFilter to intercept all URL requests
             webView.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
             webView.WebResourceRequested += WebView_WebResourceRequested;
         }
@@ -30,14 +29,19 @@ namespace TradingBrowser.Services
             var uri = new Uri(e.Request.Uri);
             string host = uri.Host;
 
-            // Check if main domain or subdomain contains a blocked keyword
             foreach (var blocked in BlockedDomains)
             {
                 if (host.Contains(blocked))
                 {
-                    // Block the request by setting Response to null and marking as handled
-                    e.Response = null;
-                    e.Handled = true;
+                    // To block in C# WebView2, we create a fake empty 204 response
+                    var coreWebView = (CoreWebView2)sender;
+                    e.Response = coreWebView.Environment.CreateWebResourceResponse(
+                        null,       // No content body
+                        204,        // HTTP 204 No Content
+                        "No Content", 
+                        ""          // No headers
+                    );
+                    
                     BlockedCount++;
                     return;
                 }
