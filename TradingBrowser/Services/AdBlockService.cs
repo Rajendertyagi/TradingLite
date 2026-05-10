@@ -1,8 +1,6 @@
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -10,7 +8,6 @@ namespace TradingBrowser.Services
 {
     public class AdBlockService
     {
-        // Thread-safe dictionary for real-time updating while blocking
         private static readonly ConcurrentDictionary<string, bool> BlockedDomains = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private static readonly HttpClient _httpClient = new HttpClient();
         
@@ -18,7 +15,6 @@ namespace TradingBrowser.Services
 
         public AdBlockService()
         {
-            // Start downloading EasyList in the background without freezing the UI
             Task.Run(() => DownloadAndParseEasyListAsync());
         }
 
@@ -32,27 +28,22 @@ namespace TradingBrowser.Services
                 int count = 0;
                 foreach (var line in lines)
                 {
-                    var trimmed = line.AsSpan().Trim();
+                    var trimmed = line.Trim();
 
-                    // Skip comments, empty lines, and cosmetic-only filters (##)
-                    if (trimmed.IsEmpty || trimmed.StartsWith("!") || trimmed.StartsWith("[")) continue;
-                    if (trimmed.IndexOf("##") >= 0 && trimmed.IndexOf("||") < 0) continue;
+                    if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("!") || trimmed.StartsWith("[")) continue;
+                    if (trimmed.Contains("##") && !trimmed.Contains("||")) continue;
 
-                    // We only care about network blocking rules starting with ||
                     if (trimmed.StartsWith("||"))
                     {
-                        // Strip || and split by options $ or end of line ^
                         int endIdx = trimmed.IndexOf('^');
                         if (endIdx < 0) endIdx = trimmed.Length;
 
-                        var domainSpan = trimmed.Slice(2, endIdx - 2);
+                        var domain = trimmed.Substring(2, endIdx - 2);
 
-                        // Strip paths (e.g., domain.com/path -> domain.com)
-                        int slashIdx = domainSpan.IndexOf('/');
-                        if (slashIdx >= 0) domainSpan = domainSpan.Slice(0, slashIdx);
+                        int slashIdx = domain.IndexOf('/');
+                        if (slashIdx >= 0) domain = domain.Substring(0, slashIdx);
 
-                        string domain = domainSpan.ToString();
-                        if (!string.IsNullOrWhiteSpace(domain) && domain.Contains('.')) // Ensure it's a domain
+                        if (!string.IsNullOrWhiteSpace(domain) && domain.Contains('.'))
                         {
                             BlockedDomains.TryAdd(domain, true);
                             count++;
@@ -82,8 +73,6 @@ namespace TradingBrowser.Services
                 var uri = new Uri(e.Request.Uri);
                 string host = uri.Host;
 
-                // Check if the host or any parent domain is blocked
-                // e.g., for ads.doubleclick.net, it checks "ads.doubleclick.net", then "doubleclick.net"
                 while (host.Length > 0)
                 {
                     if (BlockedDomains.ContainsKey(host))
@@ -101,7 +90,7 @@ namespace TradingBrowser.Services
                     host = host.Substring(dotIdx + 1);
                 }
             }
-            catch { /* Ignore malformed URIs */ }
+            catch { }
         }
     }
 }
