@@ -45,12 +45,7 @@ namespace TradingBrowser
             });
 
             ViewModel.RequestNavigate += ViewModel_RequestNavigate;
-            ViewModel.RequestFocusAddressBar += () => 
-            { 
-                AddressBox.Focus(); 
-                AddressBox.SelectAll(); 
-            };
-            
+            ViewModel.RequestFocusAddressBar += () => { AddressBox.Focus(); AddressBox.SelectAll(); };
             ViewModel.TabClosed += ViewModel_TabClosed;
             ViewModel.TabPopOut += ViewModel_TabPopOut;
             ViewModel.TabScreenshot += ViewModel_TabScreenshot;
@@ -84,16 +79,8 @@ namespace TradingBrowser
                         if (!string.IsNullOrEmpty(base64))
                         {
                             byte[] imageBytes = Convert.FromBase64String(base64);
-                            SaveFileDialog saveDialog = new SaveFileDialog 
-                            { 
-                                Filter = "PNG Image|*.png", 
-                                FileName = $"{tab.Title}_screenshot.png" 
-                            };
-                            
-                            if (saveDialog.ShowDialog() == true)
-                            {
-                                File.WriteAllBytes(saveDialog.FileName, imageBytes);
-                            }
+                            SaveFileDialog saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", FileName = $"{tab.Title}_screenshot.png" };
+                            if (saveDialog.ShowDialog() == true) File.WriteAllBytes(saveDialog.FileName, imageBytes);
                         }
                     }
                 }
@@ -105,15 +92,27 @@ namespace TradingBrowser
         {
             if (_webViewPool.TryGetValue(tab.Id, out var webView))
             {
-                ActiveWebViewHost.Children.Remove(webView);
-                webView.Dispose(); 
+                try
+                {
+                    // FIX: Stop any active loading before disposing to prevent native C++ crashes
+                    if (webView.CoreWebView2 != null)
+                    {
+                        webView.CoreWebView2.NavigationCompleted -= null;
+                        webView.CoreWebView2.SourceChanged -= null;
+                    }
+                    
+                    ActiveWebViewHost.Children.Remove(webView);
+                    webView.Dispose(); 
+                }
+                catch { /* Suppress crash if disposed too fast */ }
+                
                 _webViewPool.Remove(tab.Id);
             }
         }
 
         protected override void OnClosed(EventArgs e) 
         { 
-            SaveSession(); 
+            try { SaveSession(); } catch { }
             base.OnClosed(e); 
         }
 
@@ -124,10 +123,14 @@ namespace TradingBrowser
                 var sessionData = new List<string>();
                 foreach (var tab in ViewModel.Tabs) 
                 {
-                    if (_webViewPool.TryGetValue(tab.Id, out var wv)) 
-                        sessionData.Add(wv.Source.ToString());
-                    else if (tab.Url != "homemarket://") 
-                        sessionData.Add(tab.Url);
+                    try
+                    {
+                        if (_webViewPool.TryGetValue(tab.Id, out var wv)) 
+                            sessionData.Add(wv.Source?.ToString() ?? tab.Url);
+                        else if (tab.Url != "homemarket://") 
+                            sessionData.Add(tab.Url);
+                    }
+                    catch { /* Ignore dead tabs */ }
                 }
                 File.WriteAllText(_sessionPath, JsonSerializer.Serialize(sessionData));
             } 
@@ -147,7 +150,7 @@ namespace TradingBrowser
                         return; 
                     }
                 } 
-                catch { }
+                catch { /* If session file is corrupted, just ignore it */ }
             }
             ViewModel.AddTab();
         }
@@ -156,7 +159,7 @@ namespace TradingBrowser
         {
             if (e.PropertyName == nameof(ViewModel.SelectedTab) && ViewModel.SelectedTab != null && _isInitialized)
             {
-                await ActivateTab(ViewModel.SelectedTab);
+                try { await ActivateTab(ViewModel.SelectedTab); } catch { }
             }
         }
 
@@ -172,7 +175,11 @@ namespace TradingBrowser
 
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => 
                 {
-                    tab.Title = webView.CoreWebView2.DocumentTitle;
+                    // FIX: Force Title update to run on the UI thread to prevent silent crashes
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        try { tab.Title = webView.CoreWebView2.DocumentTitle; } catch { }
+                    });
                 };
 
                 webView.CoreWebView2.FaviconChanged += async (_, _) => 
@@ -185,18 +192,26 @@ namespace TradingBrowser
                         bitmap.StreamSource = stream;
                         bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
                         bitmap.EndInit();
-                        bitmap.Freeze();
-                        tab.Favicon = bitmap;
+                        bitmap.Freeze(); // Freezes so it can cross threads safely
+                        
+                        // FIX: Force Favicon update to run on the UI thread
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            try { tab.Favicon = bitmap; } catch { }
+                        });
                     } 
                     catch { }
                 };
 
                 webView.CoreWebView2.SourceChanged += (_, _) => 
                 {
-                    if (ViewModel.SelectedTab?.Id == tab.Id)
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        ViewModel.AddressBarText = webView.Source.ToString();
-                    }
+                        if (ViewModel.SelectedTab?.Id == tab.Id)
+                        {
+                            try { ViewModel.AddressBarText = webView.Source.ToString(); } catch { }
+                        }
+                    });
                 };
 
                 webView.CoreWebView2.WebMessageReceived += (s, args) => 
@@ -205,36 +220,32 @@ namespace TradingBrowser
                     if (!string.IsNullOrEmpty(url)) ViewModel_RequestNavigate(tab, url);
                 };
 
-                // FIX: Force links that want to open in new windows to open in new tabs instead
                 webView.CoreWebView2.NewWindowRequested += (s, args) =>
                 {
-                    args.Handled = true;
-                    ViewModel.AddTab(args.Uri);
+                    try
+                    {
+                        args.Handled = true;
+                        ViewModel.AddTab(args.Uri);
+                    }
+                    catch { }
                 };
 
                 _webViewPool[tab.Id] = webView;
                 await System.Threading.Tasks.Task.Delay(50);
 
-                if (tab.Url == "homemarket://")
-                {
-                    LoadHomePage(webView);
-                }
-                else
-                {
-                    webView.CoreWebView2.Navigate(tab.Url);
-                }
+                if (tab.Url == "homemarket://") LoadHomePage(webView);
+                else webView.CoreWebView2.Navigate(tab.Url);
             }
 
+            // Safe Muting
             foreach (var wv in _webViewPool.Values) 
             { 
-                wv.Visibility = Visibility.Hidden; 
-                MuteTab(wv, true); 
+                try { wv.Visibility = Visibility.Hidden; MuteTab(wv, true); } catch { }
             }
 
             if (_webViewPool.TryGetValue(tab.Id, out var targetWebView)) 
             { 
-                targetWebView.Visibility = Visibility.Visible; 
-                MuteTab(targetWebView, false); 
+                try { targetWebView.Visibility = Visibility.Visible; MuteTab(targetWebView, false); } catch { }
             }
         }
 
@@ -242,8 +253,11 @@ namespace TradingBrowser
         {
             try 
             { 
-                string param = mute ? "{\"muted\":true}" : "{\"muted\":false}"; 
-                webView.CoreWebView2.CallDevToolsProtocolMethodAsync("Audio.setMuted", param).ConfigureAwait(false); 
+                if (webView.CoreWebView2 != null)
+                {
+                    string param = mute ? "{\"muted\":true}" : "{\"muted\":false}"; 
+                    webView.CoreWebView2.CallDevToolsProtocolMethodAsync("Audio.setMuted", param).ConfigureAwait(false); 
+                }
             } 
             catch { }
         }
@@ -256,11 +270,14 @@ namespace TradingBrowser
 
         private void ViewModel_RequestNavigate(TabViewModel tab, string url) 
         { 
-            if (_webViewPool.TryGetValue(tab.Id, out var webView)) 
+            try 
             { 
-                webView.CoreWebView2.Navigate(url); 
-                tab.Url = url; 
-            } 
+                if (_webViewPool.TryGetValue(tab.Id, out var webView)) 
+                { 
+                    webView.CoreWebView2.Navigate(url); 
+                    tab.Url = url; 
+                } 
+            } catch { }
         }
 
         private void AddressBox_KeyDown(object sender, KeyEventArgs e) 
@@ -274,22 +291,28 @@ namespace TradingBrowser
 
         private void Tab_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab && !tab.IsPinned)
+            try
             {
-                _startPoint = e.GetPosition(null);
-                _draggedTab = tab;
-            }
+                if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab && !tab.IsPinned)
+                {
+                    _startPoint = e.GetPosition(null);
+                    _draggedTab = tab;
+                }
+            } catch { }
         }
 
         private void Tab_MouseMove(object sender, MouseEventArgs e)
         {
-            if (_draggedTab == null) return;
-            var pos = e.GetPosition(null);
-            if (Math.Abs(pos.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance)
+            try
             {
-                DragDrop.DoDragDrop((DependencyObject)sender, _draggedTab, DragDropEffects.Move);
-                _draggedTab = null;
-            }
+                if (_draggedTab == null) return;
+                var pos = e.GetPosition(null);
+                if (Math.Abs(pos.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance)
+                {
+                    DragDrop.DoDragDrop((DependencyObject)sender, _draggedTab, DragDropEffects.Move);
+                    _draggedTab = null;
+                }
+            } catch { _draggedTab = null; } // Reset drag if it fails
         }
 
         private void Tab_DragOver(object sender, DragEventArgs e)
@@ -301,15 +324,18 @@ namespace TradingBrowser
 
         private void Tab_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetData(typeof(TabViewModel)) is TabViewModel droppedTab && 
-                sender is FrameworkElement target && 
-                target.DataContext is TabViewModel targetTab && 
-                droppedTab.Id != targetTab.Id)
+            try
             {
-                int oldIndex = ViewModel.Tabs.IndexOf(droppedTab);
-                int newIndex = ViewModel.Tabs.IndexOf(targetTab);
-                ViewModel.Tabs.Move(oldIndex, newIndex);
-            }
+                if (e.Data.GetData(typeof(TabViewModel)) is TabViewModel droppedTab && 
+                    sender is FrameworkElement target && 
+                    target.DataContext is TabViewModel targetTab && 
+                    droppedTab.Id != targetTab.Id)
+                {
+                    int oldIndex = ViewModel.Tabs.IndexOf(droppedTab);
+                    int newIndex = ViewModel.Tabs.IndexOf(targetTab);
+                    ViewModel.Tabs.Move(oldIndex, newIndex);
+                }
+            } catch { }
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
