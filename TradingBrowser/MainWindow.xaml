@@ -7,6 +7,7 @@
         WindowStyle="None" AllowsTransparency="False" ResizeMode="CanResize"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown"
+        MouseMove="MainWindow_MouseMove"
         FontFamily="Segoe UI">
 
     <WindowChrome.WindowChrome>
@@ -17,98 +18,62 @@
         <vm:MainViewModel/>
     </Window.DataContext>
 
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
-            <!-- Chrome Tab Strip Height: 34px -->
-            <RowDefinition Height="34"/> 
-            <!-- Chrome Toolbar Height: 40px -->
-            <RowDefinition Height="40"/>
+            <RowDefinition Height="Auto" MaxHeight="34"/> <!-- Tabs (Collapses in Chart Mode) -->
+            <RowDefinition Height="Auto" MaxHeight="40"/> <!-- Address (Collapses in Chart Mode) -->
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/> <!-- Download Shelf -->
         </Grid.RowDefinitions>
 
         <!-- 1. Tab Strip -->
-        <Border Grid.Row="0" Background="#202124" MouseLeftButtonDown="TabStrip_MouseLeftButtonDown">
+        <Border x:Name="TabStripBorder" Grid.Row="0" Height="34" Background="#202124" MouseLeftButtonDown="TabStrip_MouseLeftButtonDown"
+                Visibility="{Binding IsChartMode, Converter={StaticResource BoolVis}, ConverterParameter=Invert}">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                     <ItemsControl ItemsSource="{Binding Tabs}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border x:Name="TabBorder" Background="#292a2d" Margin="4,4,0,0" CornerRadius="8,8,0,0" 
-                                        MaxWidth="240" Height="30" VerticalAlignment="Bottom" 
+                                <Border x:Name="TabBorder" Background="#292a2d" Margin="4,4,0,0" CornerRadius="8,8,0,0" MaxWidth="240" Height="30" VerticalAlignment="Bottom" 
                                         Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        MouseLeftButtonDown="Tab_Click"
-                                        PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"
-                                        MouseMove="Tab_MouseMove"
-                                        DragOver="Tab_DragOver"
-                                        Drop="Tab_Drop"
-                                        AllowDrop="True">
-                                    
+                                        MouseLeftButtonDown="Tab_Click" PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"
+                                        MouseMove="Tab_MouseMove" DragOver="Tab_DragOver" Drop="Tab_Drop" AllowDrop="True">
                                     <Border.ContextMenu>
                                         <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}" Background="#292a2d" Foreground="#e8eaed" FontSize="12">
-                                            <MenuItem Header="Reload" Command="{Binding ReloadCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+R" Background="#292a2d" Foreground="#e8eaed"/>
+                                            <MenuItem Header="Reload" Command="{Binding ReloadCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <MenuItem Header="Duplicate" Command="{Binding DuplicateTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
-                                            <Separator/>
-                                            <MenuItem Header="Pin tab" Command="{Binding PinTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
+                                            <Separator/><MenuItem Header="Pin tab" Command="{Binding PinTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <Separator/>
                                             <MenuItem Header="Screenshot tab" Command="{Binding ScreenshotCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <MenuItem Header="Pop-out chart" Command="{Binding PopOutCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <Separator/>
                                             <MenuItem Header="Close other tabs" Command="{Binding CloseOtherTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <MenuItem Header="Close tabs to the right" Command="{Binding CloseRightTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
-                                            <Separator/>
-                                            <MenuItem Header="Close" Command="{Binding CloseTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+W" Background="#292a2d" Foreground="#e8eaed"/>
+                                            <Separator/><MenuItem Header="Close" Command="{Binding CloseTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
-
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <!-- Chrome Favicon Alignment: 16x16, Margin 8 -->
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <Image Grid.Column="0" Source="{Binding Favicon}" Margin="8,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
-                                        
-                                        <!-- Chrome Title Alignment: 12px Font, Margin 6 -->
                                         <TextBlock x:Name="TabText" Grid.Column="1" Text="{Binding Title}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="#e8eaed" FontSize="12"/>
-                                        
-                                        <!-- Chrome Close Button Alignment: 16x16, Margin 4 -->
-                                        <Button x:Name="CloseBtn" Grid.Column="2" Content="✕" FontSize="10" Width="16" Height="16" Margin="4,0,6,0" VerticalAlignment="Center"
-                                                Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <Button x:Name="CloseBtn" Grid.Column="2" Content="✕" FontSize="10" Width="16" Height="16" Margin="4,0,6,0" VerticalAlignment="Center" Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     </Grid>
                                 </Border>
-
-                                <!-- Active Tab Color Trigger (Matches Chrome #35363A) -->
                                 <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding IsPinned}" Value="True">
-                                        <Setter TargetName="TabBorder" Property="MaxWidth" Value="40"/>
-                                        <Setter TargetName="TabText" Property="Visibility" Value="Collapsed"/>
-                                        <Setter TargetName="CloseBtn" Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                        <Setter TargetName="TabBorder" Property="Background" Value="#35363A"/>
-                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsPinned}" Value="True"><Setter TargetName="TabBorder" Property="MaxWidth" Value="40"/><Setter TargetName="TabText" Property="Visibility" Value="Collapsed"/><Setter TargetName="CloseBtn" Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                    <DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter TargetName="TabBorder" Property="Background" Value="#35363A"/></DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     </ItemsControl>
-                    
-                    <!-- New Tab Button -->
-                    <Button Content="+" Width="28" Height="28" Margin="4,0,0,0" FontWeight="Normal" Foreground="#9aa0a6" FontSize="16" 
-                            Style="{StaticResource CaptionButtonStyle}" Command="{Binding AddTabCommand}" VerticalAlignment="Bottom"/>
+                    <Button Content="+" Width="28" Height="28" Margin="4,0,0,0" FontWeight="Normal" Foreground="#9aa0a6" FontSize="16" Style="{StaticResource CaptionButtonStyle}" Command="{Binding AddTabCommand}" VerticalAlignment="Bottom"/>
                 </StackPanel>
-                
-                <!-- Window Controls (Min, Max, Close) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="─" Width="46" Height="34" Foreground="#9aa0a6" FontSize="10" Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click"/>
                     <Button Content="☐" Width="46" Height="34" Foreground="#9aa0a6" FontSize="10" Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click"/>
@@ -117,46 +82,75 @@
             </Grid>
         </Border>
 
-        <!-- 2. Address Bar / Toolbar (Chrome Pill Shape) -->
-        <Border Grid.Row="1" Height="40" Background="#202124" Padding="8,0,8,0">
+        <!-- 2. Address Bar -->
+        <Border x:Name="AddressBarBorder" Grid.Row="1" Height="40" Background="#202124" Padding="8,0,8,0"
+                Visibility="{Binding IsChartMode, Converter={StaticResource BoolVis}, ConverterParameter=Invert}">
             <Grid VerticalAlignment="Center">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 
-                <!-- Chrome Nav Buttons: 28x28 -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
                     <Button Content="←" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
                     <Button Content="→" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
                     <Button x:Name="ReloadBtn" Content="↻" Width="28" Height="28" Foreground="#9aa0a6" FontSize="13" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
                 </StackPanel>
 
-                <!-- Chrome Omnibox: Height 32, Pill Shape (Radius 24), Background #35363A -->
                 <Border Grid.Column="1" Background="#35363A" CornerRadius="24" Height="32" VerticalAlignment="Center">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <!-- Info Icon Placeholder -->
-                        <TextBlock Grid.Column="0" Text="🔒" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="#9aa0a6"/>
-                        
-                        <!-- Chrome URL Text: 14px Font, Foreground #e8eaed -->
-                        <TextBox x:Name="AddressBox" Grid.Column="1" 
-                                 Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" 
-                                 VerticalAlignment="Center" Margin="6,0,10,0" 
-                                 Background="Transparent" BorderThickness="0"
-                                 Foreground="#e8eaed" FontSize="14"
-                                 CaretBrush="#e8eaed"
-                                 KeyDown="AddressBox_KeyDown"/>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <!-- Ad-Block Shield -->
+                        <Button Grid.Column="0" Content="{Binding ShieldIcon}" FontSize="14" Margin="8,0,0,0" Background="Transparent" BorderThickness="0" Cursor="Hand" Command="{Binding ToggleShieldCommand}" VerticalAlignment="Center" ToolTip="Toggle Ad-Blocker for this site"/>
+                        <TextBox x:Name="AddressBox" Grid.Column="1" Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="6,0,10,0" Background="Transparent" BorderThickness="0" Foreground="#e8eaed" FontSize="14" CaretBrush="#e8eaed" KeyDown="AddressBox_KeyDown"/>
                     </Grid>
                 </Border>
+
+                <!-- Settings & Chart Mode Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                    <Button Content="Fullscreen" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Command="{Binding ToggleChartModeCommand}" ToolTip="Chart Mode (F11)"/>
+                    <Button Content="⚙️" Width="28" Height="28" Background="Transparent" BorderThickness="0" Cursor="Hand" Command="{Binding OpenSettingsCommand}" ToolTip="Settings"/>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- 3. WebViews -->
         <Grid Grid.Row="2" x:Name="ActiveWebViewHost" Background="#202124"/>
+
+        <!-- 4. Download Manager Shelf -->
+        <Border Grid.Row="3" Background="#292a2d" BorderThickness="0,1,0,0" BorderBrush="#3c4043" Padding="10">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Downloads.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Downloads.Count}" Value="1">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <ItemsControl ItemsSource="{Binding Downloads}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#35363A" CornerRadius="4" Padding="8" Margin="0,4,0,4" Height="40">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" Foreground="White" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                    <ProgressBar Height="4" Margin="0,4,0,0" Foreground="#8ab4f8" Background="#202124" Minimum="0" Maximum="100" Value="{Binding Progress}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <Button Content="Open" FontSize="11" Margin="0,0,5,0" Style="{StaticResource CaptionButtonStyle}" Foreground="#8ab4f8" Command="{Binding OpenFileCommand}" Visibility="{Binding IsComplete, Converter={StaticResource BoolVis}}"/>
+                                    <Button Content="Folder" FontSize="11" Style="{StaticResource CaptionButtonStyle}" Foreground="#9aa0a6" Command="{Binding OpenFolderCommand}" Visibility="{Binding IsComplete, Converter={StaticResource BoolVis}}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
     </Grid>
 </Window>
