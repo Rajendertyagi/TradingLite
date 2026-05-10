@@ -28,7 +28,6 @@ namespace TradingBrowser
         {
             try
             {
-                // Changed to TradingBrowser_Fresh to avoid corrupted profiles from previous tests
                 string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser_Fresh");
                 Directory.CreateDirectory(folder);
                 
@@ -68,8 +67,6 @@ namespace TradingBrowser
             if (!_webViewPool.ContainsKey(tab.Id))
             {
                 var webView = new Microsoft.Web.WebView2.Wpf.WebView2();
-                
-                // Add to the Grid IMMEDIATELY so it gets a valid Window Handle (HWND)
                 ActiveWebViewHost.Children.Add(webView);
 
                 await webView.EnsureCoreWebView2Async(_environment);
@@ -83,13 +80,10 @@ namespace TradingBrowser
                         ViewModel.AddressBarText = webView.Source.ToString();
                 };
 
-                // Default to TradingView
                 webView.CoreWebView2.Navigate("https://www.tradingview.com/chart/");
                 _webViewPool[tab.Id] = webView;
             }
 
-            // THE FIX: Loop through ALL tabs. Hide the inactive ones, show the active one.
-            // We use "Hidden" (not Collapsed) so background tabs keep their network connection alive!
             foreach (var wv in _webViewPool.Values)
             {
                 wv.Visibility = Visibility.Hidden;
@@ -98,6 +92,15 @@ namespace TradingBrowser
             if (_webViewPool.TryGetValue(tab.Id, out var targetWebView))
             {
                 targetWebView.Visibility = Visibility.Visible;
+            }
+        }
+
+        // Drag window by grabbing empty tab strip space
+        private void TabStrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && e.Source is Border)
+            {
+                DragMove();
             }
         }
 
@@ -145,7 +148,6 @@ namespace TradingBrowser
 
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, int lParam);
         private const int WM_SYSCOMMAND = 0x0112, SC_MAXIMIZE = 0xF030, SC_MINIMIZE = 0xF020;
-        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); }
         private void Minimize_Click(object sender, RoutedEventArgs e) => SendMessage(new System.Windows.Interop.WindowInteropHelper(this).Handle, WM_SYSCOMMAND, SC_MINIMIZE, 0);
         private void Maximize_Click(object sender, RoutedEventArgs e) => SendMessage(new System.Windows.Interop.WindowInteropHelper(this).Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
