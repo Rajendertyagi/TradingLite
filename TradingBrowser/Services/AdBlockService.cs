@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq; // FIX: Added missing Linq
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
