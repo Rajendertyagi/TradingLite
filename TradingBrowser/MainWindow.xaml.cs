@@ -62,8 +62,14 @@ namespace TradingBrowser
 
         private void ClearCache()
         {
-            try { string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser_Fresh"); if (Directory.Exists(folder)) Directory.Delete(folder, true); Directory.CreateDirectory(folder); MessageBox.Show("Cache cleared! Please restart.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information); }
-            catch (Exception ex) { MessageBox.Show(ex.Message); }
+            try 
+            { 
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser_Fresh"); 
+                if (Directory.Exists(folder)) Directory.Delete(folder, true); 
+                Directory.CreateDirectory(folder); 
+                MessageBox.Show("Cache cleared! Please restart.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information); 
+            }
+            catch { }
         }
 
         private void ViewModel_TabPopOut(TabViewModel tab) { if (_webViewPool.TryGetValue(tab.Id, out var wv) && _environment != null) { var popOut = new FloatingChartWindow(_environment, wv.Source.ToString()); popOut.Show(); } }
@@ -78,13 +84,12 @@ namespace TradingBrowser
 
         private void ViewModel_TabClosed(TabViewModel tab) { if (_webViewPool.TryGetValue(tab.Id, out var webView)) { try { ActiveWebViewHost.Children.Remove(webView); webView.Dispose(); } catch { } _webViewPool.Remove(tab.Id); } }
 
-        protected override void OnClosed(EventArgs e) { try { /* Intentionally NOT saving session */ } catch { } base.OnClosed(e); }
+        protected override void OnClosed(EventArgs e) { try { } catch { } base.OnClosed(e); }
 
-        private void SaveSession() { /* Intentionally left empty so we don't save state */ }
+        private void SaveSession() { try { } catch { } }
 
         private void RestoreSession()
         {
-            // Delete old session cache if it exists so we don't leave orphaned files
             try 
             { 
                 if (File.Exists(_sessionPath)) 
@@ -92,7 +97,6 @@ namespace TradingBrowser
             } 
             catch { }
             
-            // Always open a single fresh tab, completely ignoring saved URLs
             ViewModel.AddTab("homemarket://");
         }
 
@@ -184,7 +188,7 @@ namespace TradingBrowser
                             // If ResultFilePath is null (Blob/Script downloads), completely ignore the download tracking.
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         // If tracking the download crashes for ANY reason, just ignore it so the browser doesn't die.
                     }
@@ -243,7 +247,7 @@ namespace TradingBrowser
         private void MainWindow_MouseMove(object sender, MouseEventArgs e) { if (ViewModel.IsChartMode) { double y = e.GetPosition(this).Y; if (y < 5) { TabStripBorder.Visibility = Visibility.Visible; AddressBarBorder.Visibility = Visibility.Visible; } else if (y > 80) { TabStripBorder.Visibility = Visibility.Collapsed; AddressBarBorder.Visibility = Visibility.Collapsed; } } else { TabStripBorder.Visibility = Visibility.Visible; AddressBarBorder.Visibility = Visibility.Visible; } }
 
         private void Tab_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) { try { if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab && !tab.IsPinned) { _startPoint = e.GetPosition(null); _draggedTab = tab; } } catch { } }
-        private void Tab_MouseMove(object sender, MouseEventArgs e) { try { if (_draggedTab == null) return; var pos = e.GetPosition(null); if (Math.Abs(pos.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance) { DragDrop.DoDragDrop((DependencyObject)sender, _draggedTab, DragDropEffects.Move); _draggedTab = null; } } catch { _draggedTab = null; } }
+        private void Tab_MouseMove(object sender, MouseEventArgs e) { try { if (_draggedTab == null) return; var pos = e.GetPosition(null); if (Math.Abs(pos.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance) { DragDrop.DoDragDrop((DependencyObject)sender, _draggedTab, DragDropEffects.Move); _draggedTab = null; } catch { _draggedTab = null; } }
         private void Tab_DragOver(object sender, DragEventArgs e) { if (e.Data.GetData(typeof(TabViewModel)) is TabViewModel) e.Effects = DragDropEffects.Move; else e.Effects = DragDropEffects.None; e.Handled = true; }
         private void Tab_Drop(object sender, DragEventArgs e) { try { if (e.Data.GetData(typeof(TabViewModel)) is TabViewModel droppedTab && sender is FrameworkElement target && target.DataContext is TabViewModel targetTab && droppedTab.Id != targetTab.Id) { int oldIndex = ViewModel.Tabs.IndexOf(droppedTab); int newIndex = ViewModel.Tabs.IndexOf(targetTab); ViewModel.Tabs.Move(oldIndex, newIndex); } } catch { } }
 
@@ -263,10 +267,11 @@ namespace TradingBrowser
         private void Forward_Click(object sender, RoutedEventArgs e) { if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.GoForward(); }
         private void Reload_Click(object sender, RoutedEventArgs e) { if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.Reload(); }
 
+        // FIX: Added .Window to namespace path
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, int lParam);
         private const int WM_SYSCOMMAND = 0x0112, SC_MAXIMIZE = 0xF030, SC_MINIMIZE = 0xF020;
-        private void Minimize_Click(object sender, RoutedEventArgs e) => SendMessage(new System.Windows.Interop.WindowInteropHelper(this).Handle, WM_SYSCOMMAND, SC_MINIMIZE, 0);
-        private void Maximize_Click(object sender, RoutedEventArgs e) => SendMessage(new System.Windows.InteropWindowInteropHelper(this).Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+        private void Minimize_Click(object sender, RoutedEventArgs e) => SendMessage(System.Windows.Interop.WindowInteropHelper.Handle, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        private void Maximize_Click(object sender, RoutedEventArgs e) => SendMessage(System.Windows.Interop.WindowInteropHelper.Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
     }
 }
