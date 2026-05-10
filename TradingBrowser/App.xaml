@@ -1,72 +1,8 @@
-using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Windows;
-
-namespace TradingBrowser
-{
-    public partial class App : Application
-    {
-        // Keep Mutex alive to prevent garbage collection
-        private Mutex? _mutex;
-
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-        private const int SW_RESTORE = 9;
-
-        protected override void OnStartup(StartupEventArgs e)
-        {
-            // SINGLE INSTANCE ENFORCEMENT
-            _mutex = new Mutex(true, "Global\\TradingBrowser_SingleInstance_Mutex_987654321", out bool isNewInstance);
-            
-            if (!isNewInstance)
-            {
-                // Another instance is already running. Find it and bring it to the front.
-                var currentProcess = Process.GetCurrentProcess();
-                var runningProcesses = Process.GetProcessesByName(currentProcess.ProcessName);
-
-                foreach (var process in runningProcesses)
-                {
-                    // Ignore the current process we just tried to start
-                    if (process.Id != currentProcess.Id)
-                    {
-                        // Bring the existing window to the foreground
-                        IntPtr mainWindowHandle = process.MainWindowHandle;
-                        if (mainWindowHandle != IntPtr.Zero)
-                        {
-                            ShowWindow(mainWindowHandle, SW_RESTORE); // Unminimize if minimized
-                            SetForegroundWindow(mainWindowHandle);    // Bring to front
-                        }
-                        break;
-                    }
-                }
-
-                // Kill this second instance immediately without showing any UI
-                Shutdown();
-                return;
-            }
-
-            // CATCH ALL UNHANDLED UI THREAD CRASHES
-            DispatcherUnhandledException += (sender, args) =>
-            {
-                MessageBox.Show($"UI Crash Prevented:\n{args.Exception.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                args.Handled = true;
-            };
-
-            // CATCH ALL BACKGROUND THREAD CRASHES
-            AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
-            {
-                if (args.ExceptionObject is Exception ex)
-                {
-                    MessageBox.Show($"Background Crash Prevented:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-            };
-
-            base.OnStartup(e);
-        }
-    }
-}
+<Application x:Class="TradingBrowser.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        
+    </Application.Resources>
+</Application>
