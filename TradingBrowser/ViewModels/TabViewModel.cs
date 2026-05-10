@@ -36,6 +36,13 @@ namespace TradingBrowser.ViewModels
             get => _isPinned; 
             set { _isPinned = value; OnPropertyChanged(); } 
         }
+
+        private bool _isSelected;
+        public bool IsSelected
+        { 
+            get => _isSelected; 
+            set { _isSelected = value; OnPropertyChanged(); } 
+        }
     }
 
     public class ViewModelBase : INotifyPropertyChanged
