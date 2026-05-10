@@ -33,7 +33,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- 2. Tab Strip (Now Data Bound to MVVM) -->
+        <!-- 2. Tab Strip (Data Bound to MVVM) -->
         <Border Grid.Row="1" Height="36" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <StackPanel Orientation="Horizontal">
                 <ItemsControl ItemsSource="{Binding Tabs}">
@@ -69,18 +69,33 @@
             </StackPanel>
         </Border>
 
-        <!-- 3. Address Bar -->
+        <!-- 3. Address Bar / Omnibox -->
         <Border Grid.Row="2" Height="40" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="1" Text="{Binding SelectedTab.Url}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+                
+                <StackPanel Orientation="Horizontal" Margin="0,0,8,0">
+                    <Button Content="←" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
+                    <Button Content="→" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
+                    <Button Content="↻" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
+                </StackPanel>
+
+                <Border Grid.Column="1" Background="{DynamicResource SystemControlBackgroundChromeHighBrush}" CornerRadius="4" Height="32">
+                    <TextBox x:Name="AddressBox" 
+                             Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" 
+                             VerticalAlignment="Center" Margin="10,0,0,0" 
+                             Background="Transparent" BorderThickness="0"
+                             Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                             CaretBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                             KeyDown="AddressBox_KeyDown"/>
+                </Border>
             </Grid>
         </Border>
 
-        <!-- 4. Active WebView Host -->
+        <!-- 4. Active WebView Host Area -->
         <ContentControl Grid.Row="3" x:Name="ActiveWebViewHost"/>
         
         <!-- Hidden Pool: Keeps background tabs alive so they don't discard instantly -->
