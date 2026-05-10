@@ -24,7 +24,7 @@ namespace TradingBrowser
         private bool _isInitialized = false;
         
         private readonly string _sessionPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser_Fresh", "session.json");
-        private string _homePath = ""; // Set on load
+        private string _homePath = ""; 
         private TabViewModel? _draggedTab;
         private Point _startPoint;
 
@@ -112,14 +112,33 @@ namespace TradingBrowser
 
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { try { tab.Title = webView.CoreWebView2.DocumentTitle; } catch { } }); };
                 webView.CoreWebView2.FaviconChanged += async (_, _) => { try { var stream = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png); var bitmap = new System.Windows.Media.Imaging.BitmapImage(); bitmap.BeginInit(); bitmap.StreamSource = stream; bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bitmap.EndInit(); bitmap.Freeze(); Application.Current.Dispatcher.Invoke(() => { try { tab.Favicon = bitmap; } catch { } }); } catch { } };
-                webView.CoreWebView2.SourceChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { if (ViewModel.SelectedTab?.Id == tab.Id) { try { ViewModel.AddressBarText = webView.Source.ToString(); } catch { } } }); };
+                
+                // CRITICAL FIX: Sync tab.Url and Address Bar whenever navigation occurs
+                webView.CoreWebView2.SourceChanged += (_, _) => 
+                { 
+                    Application.Current.Dispatcher.Invoke(() => 
+                    { 
+                        try 
+                        { 
+                            var currentUrl = webView.Source?.ToString();
+                            if (!string.IsNullOrEmpty(currentUrl))
+                            {
+                                tab.Url = currentUrl; // FIX: Keep internal URL synced for Duplicate Tab!
+                                
+                                if (ViewModel.SelectedTab?.Id == tab.Id)
+                                    ViewModel.AddressBarText = currentUrl;
+                            }
+                        } 
+                        catch { } 
+                    }); 
+                };
                 
                 webView.CoreWebView2.WebMessageReceived += (s, args) => {
                     var url = args.TryGetWebMessageAsString();
                     if (!string.IsNullOrEmpty(url))
                     {
                         if (url == "clearcache") ClearCache();
-                        else if (url == "edit_homepage") EditHomepage(); // NEW: Edit homepage trigger
+                        else if (url == "edit_homepage") EditHomepage(); 
                         else ViewModel_RequestNavigate(tab, url);
                     }
                 };
