@@ -17,9 +17,20 @@ namespace TradingBrowser.ViewModels
             get => _selectedTab;
             set
             {
+                // Deselect the old tab so it returns to the darker background color
+                if (_selectedTab != null) 
+                    _selectedTab.IsSelected = false;
+                
                 _selectedTab = value;
+                
+                // Select the new tab so it turns Chrome's active grey (#35363A)
+                if (_selectedTab != null) 
+                {
+                    _selectedTab.IsSelected = true;
+                    AddressBarText = _selectedTab.Url;
+                }
+                
                 OnPropertyChanged();
-                if (_selectedTab != null) AddressBarText = _selectedTab.Url;
             }
         }
 
@@ -49,7 +60,7 @@ namespace TradingBrowser.ViewModels
         public ICommand PopOutCommand { get; }
         public ICommand ScreenshotCommand { get; }
         
-        // FIX: Initialize with empty command to prevent CS8618 warning
+        // Exposed for Context Menu Reload
         public ICommand ReloadCommand { get; set; } = new RelayCommand(_ => { });
 
         public MainViewModel()
@@ -60,7 +71,7 @@ namespace TradingBrowser.ViewModels
             CloseTabCommand = new RelayCommand(param => CloseTab(param as TabViewModel));
             UndoCloseTabCommand = new RelayCommand(_ => UndoCloseTab());
             
-            // FIX: Safely check for null before invoking to prevent CS8604 warnings
+            // Safely check for null to prevent compiler warnings
             PinTabCommand = new RelayCommand(param => { if (param is TabViewModel t) TogglePin(t); });
             DuplicateTabCommand = new RelayCommand(param => { if (param is TabViewModel t) DuplicateTab(t); });
             CloseOtherTabsCommand = new RelayCommand(param => { if (param is TabViewModel t) CloseOthers(t); });
@@ -73,7 +84,7 @@ namespace TradingBrowser.ViewModels
         {
             var newTab = new TabViewModel { Url = url };
             Tabs.Add(newTab);
-            SelectedTab = newTab;
+            SelectedTab = newTab; // This automatically triggers IsSelected = true
         }
 
         private void CloseTab(TabViewModel? tab)
