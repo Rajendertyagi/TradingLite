@@ -30,6 +30,7 @@ namespace TradingBrowser.ViewModels
 
         public event Action<TabViewModel, string>? RequestNavigate;
         public event Action? RequestFocusAddressBar;
+        public event Action<TabViewModel>? TabClosed; // NEW: Tell MainWindow to kill the WebView
 
         private readonly Stack<TabViewModel> _closedTabs = new Stack<TabViewModel>();
 
@@ -57,7 +58,11 @@ namespace TradingBrowser.ViewModels
         private void CloseTab(TabViewModel? tab)
         {
             if (tab == null) return;
-            _closedTabs.Push(tab); // Save for Ctrl+Shift+T
+            
+            // NEW: Fire event to destroy WebView2 engine and free RAM
+            TabClosed?.Invoke(tab);
+            
+            _closedTabs.Push(tab); 
             Tabs.Remove(tab);
             if (SelectedTab == tab) SelectedTab = Tabs.Count > 0 ? Tabs[Tabs.Count - 1] : null;
         }
