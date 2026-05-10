@@ -27,11 +27,7 @@ namespace TradingBrowser.ViewModels
         }
 
         private string _addressBarText = "";
-        public string AddressBarText
-        {
-            get => _addressBarText;
-            set { _addressBarText = value; OnPropertyChanged(); }
-        }
+        public string AddressBarText { get => _addressBarText; set { _addressBarText = value; OnPropertyChanged(); } }
 
         private bool _isChartMode;
         public bool IsChartMode { get => _isChartMode; set { _isChartMode = value; OnPropertyChanged(); } }
@@ -78,14 +74,19 @@ namespace TradingBrowser.ViewModels
             PopOutCommand = new RelayCommand(param => { if (param is TabViewModel t) TabPopOut?.Invoke(t); });
             ScreenshotCommand = new RelayCommand(param => { if (param is TabViewModel t) TabScreenshot?.Invoke(t); });
             ToggleShieldCommand = new RelayCommand(_ => ToggleShield());
-            OpenSettingsCommand = new RelayCommand(_ => AddTab("settings://"));
+            
+            // FIX: Don't open new tab if settings is already open
+            OpenSettingsCommand = new RelayCommand(_ => 
+            {
+                var existing = Tabs.FirstOrDefault(t => t.Url == "settings://");
+                if (existing != null) SelectedTab = existing;
+                else AddTab("settings://");
+            });
+            
             ToggleChartModeCommand = new RelayCommand(_ => IsChartMode = !IsChartMode);
         }
 
-        private void ToggleShield()
-        {
-            if (SelectedTab != null) IsSiteWhitelisted = !IsSiteWhitelisted;
-        }
+        private void ToggleShield() { if (SelectedTab != null) IsSiteWhitelisted = !IsSiteWhitelisted; }
 
         public void AddTab(string url = "homemarket://")
         {
@@ -94,14 +95,7 @@ namespace TradingBrowser.ViewModels
             SelectedTab = newTab;
         }
 
-        private void CloseTab(TabViewModel? tab)
-        {
-            if (tab == null) return;
-            TabClosed?.Invoke(tab);
-            _closedTabs.Push(tab); Tabs.Remove(tab);
-            if (SelectedTab == tab) SelectedTab = Tabs.Count > 0 ? Tabs[Tabs.Count - 1] : null;
-        }
-
+        private void CloseTab(TabViewModel? tab) { if (tab == null) return; TabClosed?.Invoke(tab); _closedTabs.Push(tab); Tabs.Remove(tab); if (SelectedTab == tab) SelectedTab = Tabs.Count > 0 ? Tabs[Tabs.Count - 1] : null; }
         private void UndoCloseTab() { if (_closedTabs.Count > 0) { var tab = _closedTabs.Pop(); Tabs.Add(tab); SelectedTab = tab; } }
         private void TogglePin(TabViewModel tab) { tab.IsPinned = !tab.IsPinned; }
         private void DuplicateTab(TabViewModel tab) { AddTab(tab.Url); }
@@ -111,8 +105,7 @@ namespace TradingBrowser.ViewModels
         public void ExecuteNavigate()
         {
             if (SelectedTab == null || string.IsNullOrWhiteSpace(AddressBarText)) return;
-            string input = AddressBarText.Trim();
-            string url;
+            string input = AddressBarText.Trim(); string url;
             if (input.StartsWith("tv ", StringComparison.OrdinalIgnoreCase)) url = $"https://www.tradingview.com/chart/?symbol={Uri.EscapeDataString(input.Substring(3).Trim())}";
             else if (input.Contains(".") && !input.Contains(" ")) url = input.StartsWith("http") ? input : "https://" + input;
             else url = $"https://www.google.com/search?q={Uri.EscapeDataString(input)}";
