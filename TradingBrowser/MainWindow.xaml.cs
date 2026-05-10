@@ -25,16 +25,15 @@ namespace TradingBrowser
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // 1. Initialize Core Engine
             string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser");
             Directory.CreateDirectory(folder);
             string args = "--disable-background-timer-throttling --disable-renderer-backgrounding --enable-gpu-rasterization";
             _environment = await CoreWebView2Environment.CreateAsync(null, folder, new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = args });
 
-            // 2. Listen for Tab changes
+            // Listen for MVVM Navigation Requests
+            ViewModel.RequestNavigate += ViewModel_RequestNavigate;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
-            // 3. Show the initial tab
             if (ViewModel.SelectedTab != null) await ActivateTab(ViewModel.SelectedTab);
         }
 
@@ -48,40 +47,73 @@ namespace TradingBrowser
 
         private async System.Threading.Tasks.Task ActivateTab(TabViewModel tab)
         {
-            // If we don't have a WebView for this tab yet, create one
             if (!_webViewPool.ContainsKey(tab.Id))
             {
                 var webView = new Microsoft.Web.WebView2.Wpf.WebView2();
                 await webView.EnsureCoreWebView2Async(_environment);
 
-                // Attach Ad-Blocker
                 _adBlocker.AttachToWebView(webView.CoreWebView2);
 
-                // Update MVVM when title changes
+                // Update MVVM Title
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => tab.Title = webView.CoreWebView2.DocumentTitle;
+                
+                // Update MVVM Address Bar when navigation completes
+                webView.CoreWebView2.SourceChanged += (_, _) => 
+                {
+                    if (ViewModel.SelectedTab?.Id == tab.Id)
+                        ViewModel.AddressBarText = webView.Source.ToString();
+                };
 
-                // Default navigation
                 webView.CoreWebView2.Navigate("https://www.tradingview.com/chart/");
-
-                // Put in hidden pool to keep renderer alive
                 HiddenWebViewPool.Children.Add(webView);
                 _webViewPool[tab.Id] = webView;
             }
 
-            // Move the selected tab's WebView to the active visual area
             var targetWebView = _webViewPool[tab.Id];
-            
             if (HiddenWebViewPool.Children.Contains(targetWebView))
                 HiddenWebViewPool.Children.Remove(targetWebView);
 
             ActiveWebViewHost.Content = targetWebView;
         }
 
-        // Tab Click UI logic
-        private void Tab_Click(object sender, MouseButtonEventArgs e)
+        // Handle Navigation from ViewModel
+        private void ViewModel_RequestNavigate(TabViewModel tab, string url)
         {
-            if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab)
-                ViewModel.SelectedTab = tab;
+            if (_webViewPool.TryGetValue(tab.Id, out var webView))
+            {
+                webView.CoreWebView2.Navigate(url);
+                tab.Url = url;
+            }
+        }
+
+        // Handle Enter key in TextBox
+        private void AddressBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ViewModel.ExecuteNavigate();
+                // Remove focus from textbox so keyboard shortcuts work in TradingView
+                ((TextBox)sender).MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)); 
+            }
+        }
+
+        // Navigation Buttons
+        private void Back_Click(object sender, RoutedEventArgs e)
+        {
+            if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) 
+                wv.CoreWebView2.GoBack();
+        }
+
+        private void Forward_Click(object sender, RoutedEventArgs e)
+        {
+            if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) 
+                wv.CoreWebView2.GoForward();
+        }
+
+        private void Reload_Click(object sender, RoutedEventArgs e)
+        {
+            if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) 
+                wv.CoreWebView2.Reload();
         }
 
         // Window Chrome Interop
