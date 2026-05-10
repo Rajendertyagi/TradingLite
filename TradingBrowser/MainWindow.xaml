@@ -6,10 +6,11 @@
         Background="#202124"
         WindowStyle="None" AllowsTransparency="False" ResizeMode="CanResize"
         Loaded="Window_Loaded"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        FontFamily="Segoe UI">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="0" CornerRadius="0" ResizeBorderThickness="5"/>
+        <WindowChrome CaptionHeight="0" CornerRadius="0" ResizeBorderThickness="6"/>
     </WindowChrome.WindowChrome>
 
     <Window.DataContext>
@@ -18,7 +19,9 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="36"/>
+            <!-- Chrome Tab Strip Height: 34px -->
+            <RowDefinition Height="34"/> 
+            <!-- Chrome Toolbar Height: 40px -->
             <RowDefinition Height="40"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -34,9 +37,8 @@
                     <ItemsControl ItemsSource="{Binding Tabs}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <!-- FIX: Tag binds to MainViewModel so ContextMenu can find it -->
-                                <Border x:Name="TabBorder" Background="#35363A" Margin="4,6,0,4" CornerRadius="8,8,0,0" 
-                                        Width="200" Height="26" VerticalAlignment="Bottom" 
+                                <Border x:Name="TabBorder" Background="#292a2d" Margin="4,4,0,0" CornerRadius="8,8,0,0" 
+                                        MaxWidth="240" Height="30" VerticalAlignment="Bottom" 
                                         Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
                                         MouseLeftButtonDown="Tab_Click"
                                         PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"
@@ -46,20 +48,19 @@
                                         AllowDrop="True">
                                     
                                     <Border.ContextMenu>
-                                        <!-- FIX: Force ContextMenu to look at the Tag (MainViewModel) -->
-                                        <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}" Background="#2D2D2D" Foreground="White">
-                                            <MenuItem Header="Reload" Command="{Binding ReloadCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+R"/>
-                                            <MenuItem Header="Duplicate" Command="{Binding DuplicateTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}" Background="#292a2d" Foreground="#e8eaed" FontSize="12">
+                                            <MenuItem Header="Reload" Command="{Binding ReloadCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+R" Background="#292a2d" Foreground="#e8eaed"/>
+                                            <MenuItem Header="Duplicate" Command="{Binding DuplicateTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <Separator/>
-                                            <MenuItem Header="Pin Tab" Command="{Binding PinTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="Pin tab" Command="{Binding PinTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <Separator/>
-                                            <MenuItem Header="📸 Screenshot Tab" Command="{Binding ScreenshotCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                            <MenuItem Header="📊 Pop-out Chart (Always on Top)" Command="{Binding PopOutCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="Screenshot tab" Command="{Binding ScreenshotCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
+                                            <MenuItem Header="Pop-out chart" Command="{Binding PopOutCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <Separator/>
-                                            <MenuItem Header="Close other tabs" Command="{Binding CloseOtherTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                            <MenuItem Header="Close tabs to the right" Command="{Binding CloseRightTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="Close other tabs" Command="{Binding CloseOtherTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
+                                            <MenuItem Header="Close tabs to the right" Command="{Binding CloseRightTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Background="#292a2d" Foreground="#e8eaed"/>
                                             <Separator/>
-                                            <MenuItem Header="Close" Command="{Binding CloseTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+W"/>
+                                            <MenuItem Header="Close" Command="{Binding CloseTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+W" Background="#292a2d" Foreground="#e8eaed"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
 
@@ -70,17 +71,27 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         
-                                        <Image Grid.Column="0" Source="{Binding Favicon}" Margin="6,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
-                                        <TextBlock x:Name="TabText" Grid.Column="1" Text="{Binding Title}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="White"/>
-                                        <Button x:Name="CloseBtn" Grid.Column="2" Content="✕" FontSize="10" Width="20" Height="20" Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <!-- Chrome Favicon Alignment: 16x16, Margin 8 -->
+                                        <Image Grid.Column="0" Source="{Binding Favicon}" Margin="8,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                                        
+                                        <!-- Chrome Title Alignment: 12px Font, Margin 6 -->
+                                        <TextBlock x:Name="TabText" Grid.Column="1" Text="{Binding Title}" Margin="6,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="#e8eaed" FontSize="12"/>
+                                        
+                                        <!-- Chrome Close Button Alignment: 16x16, Margin 4 -->
+                                        <Button x:Name="CloseBtn" Grid.Column="2" Content="✕" FontSize="10" Width="16" Height="16" Margin="4,0,6,0" VerticalAlignment="Center"
+                                                Style="{StaticResource CaptionButtonStyle}" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                                     </Grid>
                                 </Border>
 
+                                <!-- Active Tab Color Trigger (Matches Chrome #35363A) -->
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsPinned}" Value="True">
-                                        <Setter TargetName="TabBorder" Property="Width" Value="40"/>
+                                        <Setter TargetName="TabBorder" Property="MaxWidth" Value="40"/>
                                         <Setter TargetName="TabText" Property="Visibility" Value="Collapsed"/>
                                         <Setter TargetName="CloseBtn" Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                        <Setter TargetName="TabBorder" Property="Background" Value="#35363A"/>
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>
@@ -91,30 +102,56 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
-                    <Button Content="+" Width="36" Height="36" FontWeight="Bold" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Command="{Binding AddTabCommand}"/>
+                    
+                    <!-- New Tab Button -->
+                    <Button Content="+" Width="28" Height="28" Margin="4,0,0,0" FontWeight="Normal" Foreground="#9aa0a6" FontSize="16" 
+                            Style="{StaticResource CaptionButtonStyle}" Command="{Binding AddTabCommand}" VerticalAlignment="Bottom"/>
                 </StackPanel>
+                
+                <!-- Window Controls (Min, Max, Close) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="─" Width="46" Height="36" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click"/>
-                    <Button Content="☐" Width="46" Height="36" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click"/>
-                    <Button Content="✕" Width="46" Height="36" Foreground="White" Style="{StaticResource CloseButtonStyle}" Click="Close_Click"/>
+                    <Button Content="─" Width="46" Height="34" Foreground="#9aa0a6" FontSize="10" Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click"/>
+                    <Button Content="☐" Width="46" Height="34" Foreground="#9aa0a6" FontSize="10" Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click"/>
+                    <Button Content="✕" Width="46" Height="34" Foreground="#e8eaed" FontSize="10" Style="{StaticResource CloseButtonStyle}" Click="Close_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- 2. Address Bar -->
-        <Border Grid.Row="1" Height="40" Background="#35363A" Padding="8">
-            <Grid>
+        <!-- 2. Address Bar / Toolbar (Chrome Pill Shape) -->
+        <Border Grid.Row="1" Height="40" Background="#202124" Padding="8,0,8,0">
+            <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" Margin="0,0,8,0">
-                    <Button x:Name="ReloadBtn" Content="↻" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
-                    <Button Content="←" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
-                    <Button Content="→" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
+                
+                <!-- Chrome Nav Buttons: 28x28 -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Button Content="←" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
+                    <Button Content="→" Width="28" Height="28" Foreground="#9aa0a6" FontSize="14" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
+                    <Button x:Name="ReloadBtn" Content="↻" Width="28" Height="28" Foreground="#9aa0a6" FontSize="13" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
                 </StackPanel>
-                <Border Grid.Column="1" Background="#202124" CornerRadius="6" Height="32">
-                    <TextBox x:Name="AddressBox" Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Margin="10,0,0,0" Background="Transparent" BorderThickness="0" Foreground="White" CaretBrush="White" KeyDown="AddressBox_KeyDown"/>
+
+                <!-- Chrome Omnibox: Height 32, Pill Shape (Radius 24), Background #35363A -->
+                <Border Grid.Column="1" Background="#35363A" CornerRadius="24" Height="32" VerticalAlignment="Center">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Info Icon Placeholder -->
+                        <TextBlock Grid.Column="0" Text="🔒" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="#9aa0a6"/>
+                        
+                        <!-- Chrome URL Text: 14px Font, Foreground #e8eaed -->
+                        <TextBox x:Name="AddressBox" Grid.Column="1" 
+                                 Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" 
+                                 VerticalAlignment="Center" Margin="6,0,10,0" 
+                                 Background="Transparent" BorderThickness="0"
+                                 Foreground="#e8eaed" FontSize="14"
+                                 CaretBrush="#e8eaed"
+                                 KeyDown="AddressBox_KeyDown"/>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>
