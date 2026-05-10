@@ -34,8 +34,10 @@
                     <ItemsControl ItemsSource="{Binding Tabs}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
+                                <!-- FIX: Tag binds to MainViewModel so ContextMenu can find it -->
                                 <Border x:Name="TabBorder" Background="#35363A" Margin="4,6,0,4" CornerRadius="8,8,0,0" 
                                         Width="200" Height="26" VerticalAlignment="Bottom" 
+                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
                                         MouseLeftButtonDown="Tab_Click"
                                         PreviewMouseLeftButtonDown="Tab_PreviewMouseLeftButtonDown"
                                         MouseMove="Tab_MouseMove"
@@ -44,19 +46,20 @@
                                         AllowDrop="True">
                                     
                                     <Border.ContextMenu>
-                                        <ContextMenu Background="#2D2D2D" Foreground="White">
-                                            <MenuItem Header="Reload" Command="{Binding DataContext.ReloadCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" InputGestureText="Ctrl+R"/>
-                                            <MenuItem Header="Duplicate" Command="{Binding DataContext.DuplicateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        <!-- FIX: Force ContextMenu to look at the Tag (MainViewModel) -->
+                                        <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}" Background="#2D2D2D" Foreground="White">
+                                            <MenuItem Header="Reload" Command="{Binding ReloadCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+R"/>
+                                            <MenuItem Header="Duplicate" Command="{Binding DuplicateTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <Separator/>
-                                            <MenuItem Header="Pin Tab" Command="{Binding DataContext.PinTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <MenuItem Header="Pin Tab" Command="{Binding PinTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <Separator/>
-                                            <MenuItem Header="📸 Screenshot Tab" Command="{Binding DataContext.ScreenshotCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
-                                            <MenuItem Header="📊 Pop-out Chart (Always on Top)" Command="{Binding DataContext.PopOutCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <MenuItem Header="📸 Screenshot Tab" Command="{Binding ScreenshotCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="📊 Pop-out Chart (Always on Top)" Command="{Binding PopOutCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <Separator/>
-                                            <MenuItem Header="Close other tabs" Command="{Binding DataContext.CloseOtherTabsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
-                                            <MenuItem Header="Close tabs to the right" Command="{Binding DataContext.CloseRightTabsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                            <MenuItem Header="Close other tabs" Command="{Binding CloseOtherTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                            <MenuItem Header="Close tabs to the right" Command="{Binding CloseRightTabsCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                             <Separator/>
-                                            <MenuItem Header="Close" Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" InputGestureText="Ctrl+W"/>
+                                            <MenuItem Header="Close" Command="{Binding CloseTabCommand}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" InputGestureText="Ctrl+W"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
 
@@ -73,7 +76,6 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- Pin Tab UI Logic (Moved outside of Border!) -->
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding IsPinned}" Value="True">
                                         <Setter TargetName="TabBorder" Property="Width" Value="40"/>
