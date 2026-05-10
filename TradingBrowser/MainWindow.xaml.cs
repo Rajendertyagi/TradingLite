@@ -142,50 +142,43 @@ namespace TradingBrowser
                 
                 webView.CoreWebView2.NewWindowRequested += (s, args) => { try { args.Handled = true; ViewModel.AddTab(args.Uri); } catch { } };
 
-                // BULLETPROOF DOWNLOAD HANDLER
+                // ULTRA-BULLETPROOF DOWNLOAD HANDLER
                 webView.CoreWebView2.DownloadStarting += (s, args) =>
                 {
                     try
                     {
                         var download = args.DownloadOperation;
                         
-                        // FIX: Check if ResultFilePath is null (happens on Blob downloads/scripts)
-                        string filePath = download.ResultFilePath;
-                        if (string.IsNullOrEmpty(filePath))
+                        // If WebView2 gives us a valid file path, try to track it
+                        if (download != null && !string.IsNullOrEmpty(download.ResultFilePath))
                         {
-                            string downloadsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                            Directory.CreateDirectory(downloadsFolder);
-                            filePath = Path.Combine(downloadsFolder, "TradingBrowser_Download.temp");
-                        }
-
-                        var item = new DownloadItem 
-                        { 
-                            FileName = Path.GetFileName(filePath) ?? "Downloading...", 
-                            FilePath = filePath 
-                        };
-                        
-                        download.BytesReceivedChanged += (_, _) => 
-                        { 
-                            try { Application.Current?.Dispatcher.Invoke(() => { try { item.BytesReceived = (long)download.BytesReceived; item.TotalBytes = (long)(download.TotalBytesToReceive ?? 0); } catch { } }); } 
-                            catch { } 
-                        };
-                        
-                        download.StateChanged += (_, _) => 
-                        { 
-                            try 
+                            string filePath = download.ResultFilePath;
+                            var item = new DownloadItem { FileName = Path.GetFileName(filePath) ?? "Downloading...", FilePath = filePath };
+                            
+                            download.BytesReceivedChanged += (_, _) => 
                             { 
-                                if (download.State == CoreWebView2DownloadState.Completed || download.State == CoreWebView2DownloadState.Interrupted) 
-                                    Application.Current?.Dispatcher.Invoke(() => { try { item.IsComplete = true; } catch { } }); 
-                            } 
-                            catch { } 
-                        };
-                        
-                        Application.Current?.Dispatcher.Invoke(() => { try { ViewModel.Downloads.Add(item); } catch { } });
+                                try { Application.Current?.Dispatcher?.Invoke(() => { item.BytesReceived = (long)download.BytesReceived; item.TotalBytes = (long)(download.TotalBytesToReceive ?? 0); }); } 
+                                catch { } 
+                            };
+                            
+                            download.StateChanged += (_, _) => 
+                            { 
+                                try { if (download.State == CoreWebView2DownloadState.Completed || download.State == CoreWebView2DownloadState.Interrupted) Application.Current?.Dispatcher?.Invoke(() => item.IsComplete = true); } 
+                                catch { } 
+                            };
+                            
+                            try { Application.Current?.Dispatcher?.Invoke(() => ViewModel.Downloads.Add(item)); } catch { }
+                        }
+                        else
+                        {
+                            // If ResultFilePath is null (Blob/Script downloads), completely ignore the download tracking.
+                            // Just let Windows/Edge handle it using its native Save dialog.
+                        }
                     }
                     catch (Exception ex)
                     {
-                        // Silently fail downloads so the browser doesn't crash
-                        System.Diagnostics.Debug.WriteLine($"Download Error: {ex.Message}");
+                        // If tracking the download crashes for ANY reason, just ignore it so the browser doesn't die.
+                        // Don't set args.Handled = true, so WebView2 will just fall back to native downloading.
                     }
                 };
 
