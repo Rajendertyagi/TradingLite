@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Microsoft.Web.WebView2.Core;
+using Microsoft.WebView2.Core;
 using TradingBrowser.Services;
 using TradingBrowser.ViewModels;
 using TradingBrowser.Views;
@@ -18,7 +18,7 @@ namespace TradingBrowser
     public partial class MainWindow : Window
     {
         private MainViewModel ViewModel => (MainViewModel)DataContext;
-        private readonly Dictionary<Guid, Microsoft.Web.WebView2.Wpf.WebView2> _webViewPool = new();
+        private readonly Dictionary<Guid, Microsoft.WebView2.Wpf.WebView2> _webViewPool = new();
         private readonly AdBlockService _adBlocker = new AdBlockService();
         private CoreWebView2Environment? _environment;
         private bool _isInitialized = false;
@@ -84,9 +84,9 @@ namespace TradingBrowser
 
         private void ViewModel_TabClosed(TabViewModel tab) { if (_webViewPool.TryGetValue(tab.Id, out var webView)) { try { ActiveWebViewHost.Children.Remove(webView); webView.Dispose(); } catch { } _webViewPool.Remove(tab.Id); } }
 
-        protected override void OnClosed(EventArgs e) { try { } catch { } base.OnClosed(e); }
+        protected override void OnClosed(EventArgs e) { } 
 
-        private void SaveSession() { try { } catch { } }
+        private void SaveSession() { } 
 
         private void RestoreSession()
         {
@@ -106,7 +106,7 @@ namespace TradingBrowser
         {
             if (!_webViewPool.ContainsKey(tab.Id))
             {
-                var webView = new Microsoft.Web.WebView2.Wpf.WebView2();
+                var webView = new Microsoft.WebView2.Wpf.WebView2();
                 ActiveWebViewHost.Children.Add(webView);
                 await webView.EnsureCoreWebView2Async(_environment);
 
@@ -185,12 +185,12 @@ namespace TradingBrowser
                         }
                         else
                         {
-                            // If ResultFilePath is null (Blob/Script downloads), completely ignore the download tracking.
+                            // If ResultFilePath is null (Blob/Script downloads), completely ignore tracking. Windows native Save dialog handles it.
                         }
                     }
                     catch
                     {
-                        // If tracking the download crashes for ANY reason, just ignore it so the browser doesn't die.
+                        // If tracking the download crashes, ignore it so the browser doesn't die.
                     }
                 };
 
@@ -216,15 +216,15 @@ namespace TradingBrowser
             try
             {
                 if (!File.Exists(_homePath)) { var def = GetDefaultLinks(); File.WriteAllText(_homePath, JsonSerializer.Serialize(def, new JsonSerializerOptions { WriteIndented = true })); }
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("notepad.exe", _homePath) { UseShellExecute = true });
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("notepad.exe", _homePath) { UseShellExecute = true };
             }
             catch (Exception ex) { MessageBox.Show($"Failed to open editor: {ex.Message}"); }
         }
 
-        private class HomePageLink { public string Title { get; set; } = ""; public string Url { get; set; } = ""; public string Color { get; set; } = "#0078d4"; }
+        private class HomePageLink { public string Title { get; set; } = ""; public string Url { get; set; } = ""; public string Color { get; set; } = "#0078d9d4"; }
         private List<HomePageLink> GetDefaultLinks() => new List<HomePageLink> { new() { Title = "Zerodha", Url = "https://kite.zerodha.com", Color = "#387ed1" }, new() { Title = "Upstox", Url = "https://pro.upstox.com", Color = "#5e72e4" }, new() { Title = "Groww", Url = "https://app.groww.in", Color = "#00d09c" }, new() { Title = "Angel One", Url = "https://trade.angelone.in", Color = "#e8375d" }, new() { Title = "ICICI Direct", Url = "https://www.icicidirect.com", Color = "#f37021" } };
 
-        private void LoadHomePage(Microsoft.Web.WebView2.Wpf.WebView2 webView)
+        private void LoadHomePage(Microsoft.WebView2.Wpf.WebView2 webView)
         {
             List<HomePageLink> links = new List<HomePageLink>();
             if (File.Exists(_homePath))
@@ -239,8 +239,8 @@ namespace TradingBrowser
             webView.CoreWebView2.NavigateToString(html);
         }
 
-        private void LoadSettingsPage(Microsoft.Web.WebView2.Wpf.WebView2 webView) { webView.CoreWebView2.NavigateToString(@"<html><head><style>body{background-color:#202124;color:#e8eaed;font-family:'Inter',sans-serif;padding:40px}h2{margin-top:0}button{padding:12px 20px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;margin-top:20px}button:hover{background:#1a86d9}.shortcut{background:#35363a;padding:10px;margin-top:10px;border-radius:4px}</style></head><body><h2>Settings</h2><p><strong>Ad-Blocker:</strong> Active. Use shield icon in address bar.</p><p><strong>Quick Menu (TradingView):</strong></p><div class='shortcut'>Ctrl + Alt + 1 &rarr; 1 Min</div><div class='shortcut'>Ctrl + Alt + 5 &rarr; 1 Hour</div><button onclick=""window.chrome.webview.postMessage('clearcache')"">Clear All Cache</button></body></html>"); }
-        private void MuteTab(Microsoft.Web.WebView2.Wpf.WebView2 webView, bool mute) { try { if(webView.CoreWebView2!=null) webView.CoreWebView2.CallDevToolsProtocolMethodAsync("Audio.setMuted", mute ? "{\"muted\":true}" : "{\"muted\":false}").ConfigureAwait(false); } catch { } }
+        private void LoadSettingsPage(Microsoft.WebView2.Wpf.WebView2 webView) { webView.CoreWebView2.NavigateToString(@"<html><head><style>body{background-color:#202124;color:#e8eaed;font-family:'Inter',sans-serif;padding:40px}h2{margin-top:0}button{padding:12px 20px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;margin-top:20px}button:hover{background:#1a86d9}.shortcut{background:#35363a;padding:10px;margin-top:10px;border-radius:4px}</style></head><body><h2>Settings</h2><p><strong>Ad-Blocker:</strong> Active. Use shield icon in address bar.</p><p><strong>Quick Menu (TradingView):</strong></p><div class='shortcut'>Ctrl + Alt + 1 &rarr; 1 Min</div><div class='shortcut'>Ctrl + Alt + 5 &rarr; 1 Hour</div><button onclick=""window.chrome.webview.postMessage('clearcache')"">Clear All Cache</button></body></html>"); }
+        private void MuteTab(Microsoft.WebView2.Wpf.WebView2 webView, bool mute) { try { if(webView.CoreWebView2!=null) webView.CoreWebView2.CallDevToolsProtocolMethodAsync("Audio.setMuteTab", mute ? "{\"muted\":true}" : "{\"muted\":false}").ConfigureAwait(false); } catch { } }
         private void ViewModel_RequestNavigate(TabViewModel tab, string url) { try { if (_webViewPool.TryGetValue(tab.Id, out var webView)) { webView.CoreWebView2.Navigate(url); tab.Url = url; } } catch { } }
         private void AddressBox_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { ViewModel.ExecuteNavigate(); e.Handled = true; } }
 
@@ -257,8 +257,8 @@ namespace TradingBrowser
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.W) { ViewModel.CloseTabCommand.Execute(ViewModel.SelectedTab); e.Handled = true; }
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.L) { ViewModel.FocusAddressBar(); e.Handled = true; }
             if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.T) { ViewModel.UndoCloseTabCommand.Execute(null); e.Handled = true; }
+            if (Key.R == Key.F11) { ViewModel.IsChartMode = !ViewModel.IsChartMode; e.Handled = true; }
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.R) { Reload_Click(sender, e); e.Handled = true; }
-            if (e.Key == Key.F11) { ViewModel.IsChartMode = !ViewModel.IsChartMode; e.Handled = true; }
         }
 
         private void TabStrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed && e.Source is Border) DragMove(); }
@@ -267,7 +267,6 @@ namespace TradingBrowser
         private void Forward_Click(object sender, RoutedEventArgs e) { if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.GoForward(); }
         private void Reload_Click(object sender, RoutedEventArgs e) { if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.Reload(); }
 
-        // FIX: Added .Window to namespace path
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, int lParam);
         private const int WM_SYSCOMMAND = 0x0112, SC_MAXIMIZE = 0xF030, SC_MINIMIZE = 0xF020;
         private void Minimize_Click(object sender, RoutedEventArgs e) => SendMessage(System.Windows.Interop.WindowInteropHelper.Handle, WM_SYSCOMMAND, SC_MINIMIZE, 0);
