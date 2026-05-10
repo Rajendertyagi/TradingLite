@@ -113,7 +113,7 @@ namespace TradingBrowser
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { try { tab.Title = webView.CoreWebView2.DocumentTitle; } catch { } }); };
                 webView.CoreWebView2.FaviconChanged += async (_, _) => { try { var stream = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png); var bitmap = new System.Windows.Media.Imaging.BitmapImage(); bitmap.BeginInit(); bitmap.StreamSource = stream; bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bitmap.EndInit(); bitmap.Freeze(); Application.Current.Dispatcher.Invoke(() => { try { tab.Favicon = bitmap; } catch { } }); } catch { } };
                 
-                // CRITICAL FIX: Sync tab.Url and Address Bar whenever navigation occurs
+                // CRITICAL FIX: Sync tab.Url and Address Bar without race conditions
                 webView.CoreWebView2.SourceChanged += (_, _) => 
                 { 
                     Application.Current.Dispatcher.Invoke(() => 
@@ -123,9 +123,11 @@ namespace TradingBrowser
                             var currentUrl = webView.Source?.ToString();
                             if (!string.IsNullOrEmpty(currentUrl))
                             {
-                                tab.Url = currentUrl; // FIX: Keep internal URL synced for Duplicate Tab!
+                                // ALWAYS keep internal URL synced (fixes Duplicate Tab bug)
+                                tab.Url = currentUrl; 
                                 
-                                if (ViewModel.SelectedTab?.Id == tab.Id)
+                                // ONLY update visual Address Bar if user isn't typing in it
+                                if (ViewModel.SelectedTab?.Id == tab.Id && !AddressBox.IsKeyboardFocused)
                                     ViewModel.AddressBarText = currentUrl;
                             }
                         } 
