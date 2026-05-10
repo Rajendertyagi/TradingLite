@@ -3,9 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:TradingBrowser.ViewModels"
         Title="TradingBrowser" Height="800" Width="1200"
-        Background="#1E1E1E"
-        WindowStyle="None" AllowsTransparency="False" ResizeMode="CanResize"
+        Background="#202124"
+        WindowStyle="None" 
+        AllowsTransparency="False" 
+        ResizeMode="CanResize"
         Loaded="Window_Loaded">
+
+    <!-- This kills the 1px white border in .NET 8 -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" CornerRadius="0" ResizeBorderThickness="5"/>
+    </WindowChrome.WindowChrome>
 
     <Window.DataContext>
         <vm:MainViewModel/>
@@ -13,64 +20,63 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="32"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="36"/> <!-- Tabs are now at the absolute top -->
+            <RowDefinition Height="40"/> <!-- Address Bar -->
+            <RowDefinition Height="*"/>   <!-- Web Content -->
         </Grid.RowDefinitions>
 
-        <!-- 1. Title Bar -->
-        <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="TradingBrowser" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="#CCCCCC"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="─" Width="46" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click"/>
-                <Button Content="☐" Width="46" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click"/>
-                <Button Content="✕" Width="46" Height="32" Style="{StaticResource CloseButtonStyle}" Click="Close_Click"/>
-            </StackPanel>
-        </Grid>
+        <!-- 1. Tab Strip (Acts as the top bar) -->
+        <Border Grid.Row="0" Background="#202124" MouseLeftButtonDown="TabStrip_MouseLeftButtonDown">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <!-- 2. Tab Strip -->
-        <Border Grid.Row="1" Height="36" Background="#2D2D2D" BorderThickness="0,0,0,1" BorderBrush="#404040">
-            <StackPanel Orientation="Horizontal">
-                <ItemsControl ItemsSource="{Binding Tabs}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="#1E1E1E" 
-                                    Margin="2,4,0,4" CornerRadius="6,6,0,0" 
-                                    Width="200" Height="28" 
-                                    VerticalAlignment="Bottom"
-                                    MouseLeftButtonDown="Tab_Click">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="#CCCCCC"/>
-                                    <Button Grid.Column="1" Content="✕" FontSize="10" Width="20" Height="20" 
-                                            Style="{StaticResource CaptionButtonStyle}" 
-                                            Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                            CommandParameter="{Binding}"/>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-                <Button Content="+" Width="36" Height="36" FontWeight="Bold" Style="{StaticResource CaptionButtonStyle}" 
-                        Command="{Binding AddTabCommand}"/>
-            </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <ItemsControl ItemsSource="{Binding Tabs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#35363A" 
+                                        Margin="4,6,0,4" CornerRadius="8,8,0,0" 
+                                        Width="200" Height="26" 
+                                        VerticalAlignment="Bottom"
+                                        MouseLeftButtonDown="Tab_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Title}" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="White"/>
+                                        <Button Grid.Column="1" Content="✕" FontSize="10" Width="20" Height="20" 
+                                                Style="{StaticResource CaptionButtonStyle}" 
+                                                Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <Button Content="+" Width="36" Height="36" FontWeight="Bold" Foreground="White" Style="{StaticResource CaptionButtonStyle}" 
+                            Command="{Binding AddTabCommand}"/>
+                </StackPanel>
+
+                <!-- Window Controls (Close, Max, Min) sit on the same row as tabs -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="─" Width="46" Height="36" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click"/>
+                    <Button Content="☐" Width="46" Height="36" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click"/>
+                    <Button Content="✕" Width="46" Height="36" Foreground="White" Style="{StaticResource CloseButtonStyle}" Click="Close_Click"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <!-- 3. Address Bar -->
-        <Border Grid.Row="2" Height="40" Background="#252526" Padding="8">
+        <!-- 2. Address Bar -->
+        <Border Grid.Row="1" Height="40" Background="#35363A" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -78,25 +84,25 @@
                 </Grid.ColumnDefinitions>
                 
                 <StackPanel Orientation="Horizontal" Margin="0,0,8,0">
-                    <Button Content="←" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
-                    <Button Content="→" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
-                    <Button Content="↻" Width="32" Height="32" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
+                    <Button Content="←" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Back_Click"/>
+                    <Button Content="→" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Forward_Click"/>
+                    <Button Content="↻" Width="32" Height="32" Foreground="White" Style="{StaticResource CaptionButtonStyle}" Click="Reload_Click"/>
                 </StackPanel>
 
-                <Border Grid.Column="1" Background="#1E1E1E" CornerRadius="4" Height="32">
+                <Border Grid.Column="1" Background="#202124" CornerRadius="6" Height="32">
                     <TextBox x:Name="AddressBox" 
                              Text="{Binding AddressBarText, UpdateSourceTrigger=PropertyChanged}" 
                              VerticalAlignment="Center" Margin="10,0,0,0" 
                              Background="Transparent" BorderThickness="0"
-                             Foreground="#CCCCCC"
-                             CaretBrush="#CCCCCC"
+                             Foreground="White"
+                             CaretBrush="White"
                              KeyDown="AddressBox_KeyDown"/>
                 </Border>
             </Grid>
         </Border>
 
-        <!-- 4. ALL Tab WebViews live here. We hide them instead of collapsing them! -->
-        <Grid Grid.Row="3" x:Name="ActiveWebViewHost"/>
+        <!-- 3. WebViews -->
+        <Grid Grid.Row="2" x:Name="ActiveWebViewHost" Background="#202124"/>
         
     </Grid>
 </Window>
