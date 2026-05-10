@@ -33,7 +33,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- 2. Tab Strip (Data Bound to MVVM) -->
+        <!-- 2. Tab Strip -->
         <Border Grid.Row="1" Height="36" Background="#2D2D2D" BorderThickness="0,0,0,1" BorderBrush="#404040">
             <StackPanel Orientation="Horizontal">
                 <ItemsControl ItemsSource="{Binding Tabs}">
@@ -69,7 +69,7 @@
             </StackPanel>
         </Border>
 
-        <!-- 3. Address Bar / Omnibox -->
+        <!-- 3. Address Bar -->
         <Border Grid.Row="2" Height="40" Background="#252526" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -95,10 +95,8 @@
             </Grid>
         </Border>
 
-        <!-- 4. Active WebView Host Area -->
-        <ContentControl Grid.Row="3" x:Name="ActiveWebViewHost"/>
+        <!-- 4. ALL Tab WebViews live here. We hide them instead of collapsing them! -->
+        <Grid Grid.Row="3" x:Name="ActiveWebViewHost"/>
         
-        <!-- Hidden Pool: Keeps background tabs alive so they don't discard instantly -->
-        <Grid Grid.Row="3" x:Name="HiddenWebViewPool" Visibility="Collapsed"/>
     </Grid>
 </Window>
