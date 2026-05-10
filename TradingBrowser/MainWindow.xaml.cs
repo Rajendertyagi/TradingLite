@@ -107,7 +107,14 @@ namespace TradingBrowser
                 {
                     try 
                     { 
-                        tab.FaviconUrl = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png); 
+                        var stream = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png);
+                        var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.StreamSource = stream;
+                        bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                        bitmap.EndInit();
+                        bitmap.Freeze(); // Freeze so it can be passed to UI thread safely
+                        tab.Favicon = bitmap; 
                     } 
                     catch { }
                 };
