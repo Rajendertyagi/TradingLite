@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
@@ -47,6 +48,9 @@ namespace TradingBrowser.ViewModels
         public ICommand CloseRightTabsCommand { get; }
         public ICommand PopOutCommand { get; }
         public ICommand ScreenshotCommand { get; }
+        
+        // Exposed for Context Menu
+        public ICommand ReloadCommand { get; set; }
 
         public MainViewModel()
         {
@@ -56,7 +60,6 @@ namespace TradingBrowser.ViewModels
             CloseTabCommand = new RelayCommand(param => CloseTab(param as TabViewModel));
             UndoCloseTabCommand = new RelayCommand(_ => UndoCloseTab());
             
-            // Context Menu Commands
             PinTabCommand = new RelayCommand(param => TogglePin(param as TabViewModel));
             DuplicateTabCommand = new RelayCommand(param => DuplicateTab(param as TabViewModel));
             CloseOtherTabsCommand = new RelayCommand(param => CloseOthers(param as TabViewModel));
@@ -92,7 +95,6 @@ namespace TradingBrowser.ViewModels
         }
 
         private void TogglePin(TabViewModel? tab) { if(tab != null) tab.IsPinned = !tab.IsPinned; }
-        
         private void DuplicateTab(TabViewModel? tab) { if(tab != null) AddTab(tab.Url); }
 
         private void CloseOthers(TabViewModel? tab)
