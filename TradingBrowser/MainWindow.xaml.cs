@@ -205,6 +205,13 @@ namespace TradingBrowser
                     if (!string.IsNullOrEmpty(url)) ViewModel_RequestNavigate(tab, url);
                 };
 
+                // FIX: Force links that want to open in new windows to open in new tabs instead
+                webView.CoreWebView2.NewWindowRequested += (s, args) =>
+                {
+                    args.Handled = true;
+                    ViewModel.AddTab(args.Uri);
+                };
+
                 _webViewPool[tab.Id] = webView;
                 await System.Threading.Tasks.Task.Delay(50);
 
