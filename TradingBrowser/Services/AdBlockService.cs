@@ -68,6 +68,10 @@ namespace TradingBrowser.Services
         {
             if (BlockedDomains.IsEmpty) return;
 
+            // CRITICAL FIX: Never block the main HTML document. 
+            // Only block sub-resources like scripts, images, and XHRs.
+            if (e.ResourceContext == CoreWebView2WebResourceContext.Document) return;
+
             try
             {
                 var uri = new Uri(e.Request.Uri);
