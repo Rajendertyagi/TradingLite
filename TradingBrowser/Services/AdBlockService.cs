@@ -1,6 +1,7 @@
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -9,6 +10,15 @@ namespace TradingBrowser.Services
     public class AdBlockService
     {
         private static readonly ConcurrentDictionary<string, bool> BlockedDomains = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        
+        // CRITICAL FIX: Whitelist core Google domains to prevent YouTube/Gmail from breaking
+        private static readonly HashSet<string> WhitelistedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "google.com", "google.co.in", "youtube.com", "googleapis.com", 
+            "googlevideo.com", "ytimg.com", "gstatic.com", "googleusercontent.com",
+            "gmail.com"
+        };
+
         private static readonly HttpClient _httpClient = new HttpClient();
         
         public int BlockedCount { get; private set; }
@@ -68,8 +78,7 @@ namespace TradingBrowser.Services
         {
             if (BlockedDomains.IsEmpty) return;
 
-            // CRITICAL FIX: Never block the main HTML document. 
-            // Only block sub-resources like scripts, images, and XHRs.
+            // Never block the main HTML document
             if (e.ResourceContext == CoreWebView2WebResourceContext.Document) return;
 
             try
@@ -77,6 +86,18 @@ namespace TradingBrowser.Services
                 var uri = new Uri(e.Request.Uri);
                 string host = uri.Host;
 
+                // SAFE CHECK: If the URL belongs to Google/YouTube/Gmail, immediately allow it
+                string tempHost = host;
+                while (tempHost.Length > 0)
+                {
+                    if (WhitelistedDomains.Contains(tempHost)) return;
+                    
+                    int dotIdx = tempHost.IndexOf('.');
+                    if (dotIdx < 0) break;
+                    tempHost = tempHost.Substring(dotIdx + 1);
+                }
+
+                // If not whitelisted, check against EasyList
                 while (host.Length > 0)
                 {
                     if (BlockedDomains.ContainsKey(host))
