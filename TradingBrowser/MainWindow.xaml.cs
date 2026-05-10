@@ -28,10 +28,10 @@ namespace TradingBrowser
         {
             try
             {
-                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser");
+                // Changed to TradingBrowser_Fresh to avoid corrupted profiles from previous tests
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser_Fresh");
                 Directory.CreateDirectory(folder);
                 
-                // Safely initialize WebView2 Environment
                 _environment = await CoreWebView2Environment.CreateAsync(null, folder, new CoreWebView2EnvironmentOptions 
                 { 
                     AdditionalBrowserArguments = "--disable-background-timer-throttling --disable-renderer-backgrounding" 
@@ -46,13 +46,12 @@ namespace TradingBrowser
             }
             catch (Exception ex)
             {
-                // If WebView2 completely fails, show UI instead of black screen
-                ActiveWebViewHost.Content = new TextBlock 
+                ActiveWebViewHost.Children.Add(new TextBlock 
                 { 
                     Text = $"WebView2 Init Failed: {ex.Message}", 
                     Foreground = System.Windows.Media.Brushes.Red,
                     Margin = new Thickness(20)
-                };
+                });
             }
         }
 
@@ -69,6 +68,10 @@ namespace TradingBrowser
             if (!_webViewPool.ContainsKey(tab.Id))
             {
                 var webView = new Microsoft.Web.WebView2.Wpf.WebView2();
+                
+                // Add to the Grid IMMEDIATELY so it gets a valid Window Handle (HWND)
+                ActiveWebViewHost.Children.Add(webView);
+
                 await webView.EnsureCoreWebView2Async(_environment);
 
                 _adBlocker.AttachToWebView(webView.CoreWebView2);
@@ -80,16 +83,22 @@ namespace TradingBrowser
                         ViewModel.AddressBarText = webView.Source.ToString();
                 };
 
+                // Default to TradingView
                 webView.CoreWebView2.Navigate("https://www.tradingview.com/chart/");
-                HiddenWebViewPool.Children.Add(webView);
                 _webViewPool[tab.Id] = webView;
             }
 
-            var targetWebView = _webViewPool[tab.Id];
-            if (HiddenWebViewPool.Children.Contains(targetWebView))
-                HiddenWebViewPool.Children.Remove(targetWebView);
+            // THE FIX: Loop through ALL tabs. Hide the inactive ones, show the active one.
+            // We use "Hidden" (not Collapsed) so background tabs keep their network connection alive!
+            foreach (var wv in _webViewPool.Values)
+            {
+                wv.Visibility = Visibility.Hidden;
+            }
 
-            ActiveWebViewHost.Content = targetWebView;
+            if (_webViewPool.TryGetValue(tab.Id, out var targetWebView))
+            {
+                targetWebView.Visibility = Visibility.Visible;
+            }
         }
 
         private void Tab_Click(object sender, MouseButtonEventArgs e)
