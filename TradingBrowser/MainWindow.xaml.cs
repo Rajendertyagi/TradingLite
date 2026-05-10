@@ -47,7 +47,6 @@ namespace TradingBrowser
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
             ViewModel.ClearCacheRequested += () => ClearCache();
 
-            // Hook Shield Toggle to AdBlocker
             ViewModel.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(ViewModel.IsSiteWhitelisted) && ViewModel.SelectedTab != null)
@@ -65,7 +64,7 @@ namespace TradingBrowser
                 string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradingBrowser_Fresh");
                 if (Directory.Exists(folder)) Directory.Delete(folder, true);
                 Directory.CreateDirectory(folder);
-                MessageBox.Show("Cache and Cookies cleared!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Cache and Cookies cleared! Please restart the browser.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
         }
@@ -134,7 +133,6 @@ namespace TradingBrowser
             if (e.PropertyName == nameof(ViewModel.SelectedTab) && ViewModel.SelectedTab != null && _isInitialized)
             {
                 await ActivateTab(ViewModel.SelectedTab);
-                // Update Shield Icon State
                 ViewModel.IsSiteWhitelisted = _adBlocker.IsDomainWhitelisted(ViewModel.SelectedTab.Url);
             }
         }
@@ -150,13 +148,33 @@ namespace TradingBrowser
                 _adBlocker.AttachToWebView(webView.CoreWebView2);
 
                 webView.CoreWebView2.DocumentTitleChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { try { tab.Title = webView.CoreWebView2.DocumentTitle; } catch { } }); };
-                webView.CoreWebView2.FaviconChanged += async (_) => { try { var stream = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png); var bitmap = new System.Windows.Media.Imaging.BitmapImage(); bitmap.BeginInit(); bitmap.StreamSource = stream; bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bitmap.EndInit(); bitmap.Freeze(); Application.Current.Dispatcher.Invoke(() => { try { tab.Favicon = bitmap; } catch { } }); } catch { } };
+                
+                // FIX: Changed (_) to (_, _) because the event requires two parameters!
+                webView.CoreWebView2.FaviconChanged += async (_, _) => 
+                { 
+                    try 
+                    { 
+                        var stream = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png); 
+                        var bitmap = new System.Windows.Media.Imaging.BitmapImage(); 
+                        bitmap.BeginInit(); 
+                        bitmap.StreamSource = stream; 
+                        bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; 
+                        bitmap.EndInit(); 
+                        bitmap.Freeze(); 
+                        
+                        Application.Current.Dispatcher.Invoke(() => 
+                        { 
+                            try { tab.Favicon = bitmap; } catch { } 
+                        }); 
+                    } 
+                    catch { } 
+                };
+
                 webView.CoreWebView2.SourceChanged += (_, _) => { Application.Current.Dispatcher.Invoke(() => { if (ViewModel.SelectedTab?.Id == tab.Id) { try { ViewModel.AddressBarText = webView.Source.ToString(); } catch { } } }); };
                 webView.CoreWebView2.WebMessageReceived += (s, args) => { var url = args.TryGetWebMessageAsString(); if (!string.IsNullOrEmpty(url)) { if (url == "clearcache") ClearCache(); else ViewModel_RequestNavigate(tab, url); } };
                 
                 webView.CoreWebView2.NewWindowRequested += (s, args) => { try { args.Handled = true; ViewModel.AddTab(args.Uri); } catch { } };
 
-                // FEATURE: Download Manager
                 webView.CoreWebView2.DownloadStarting += (s, args) =>
                 {
                     var download = args.DownloadOperation;
@@ -166,7 +184,6 @@ namespace TradingBrowser
                     Application.Current.Dispatcher.Invoke(() => ViewModel.Downloads.Add(item));
                 };
 
-                // FEATURE: TradingView Quick Shortcuts (Ctrl+Alt+1..5)
                 if (tab.Url.Contains("tradingview.com"))
                 {
                     await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
@@ -175,11 +192,7 @@ namespace TradingBrowser
                                 let tf = null;
                                 if(e.key==='1') tf='1'; if(e.key==='2') tf='5'; if(e.key==='3') tf='15';
                                 if(e.key==='4') tf='30'; if(e.key==='5') tf='60'; if(e.key==='6') tf='120'; if(e.key==='7') tf='D';
-                                if(tf) {
-                                    e.preventDefault(); e.stopPropagation();
-                                    let btns = document.querySelectorAll('button[name="timeInterval"]');
-                                    btns.forEach(b => { if(b.getAttribute('data-value') === tf) b.click(); });
-                                }
+                                if(tf) { e.preventDefault(); e.stopPropagation(); let btns = document.querySelectorAll('button[name=""timeInterval""]'); btns.forEach(b => { if(b.getAttribute('data-value') === tf) b.click(); }); }
                             }
                         });");
                 }
@@ -200,7 +213,7 @@ namespace TradingBrowser
         {
             string html = @"<html><head><style>body{background-color:#202124;color:#e8eaed;font-family:'Segoe UI',sans-serif;padding:40px;} h2{margin-top:0;} button{padding:12px 20px;background:#0078d4;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;margin-top:20px;} button:hover{background:#1a86d9;} .shortcut{background:#35363a;padding:10px;margin-top:10px;border-radius:4px;}</style></head><body>
             <h2>TradingBrowser Settings</h2>
-            <p><strong>Ad-Blocker:</strong> Active. Use the 🛡️ icon in the address bar to whitelist specific sites.</p>
+            <p><strong>Ad-Blocker:</strong> Active. Use the shield icon in the address bar to whitelist specific sites.</p>
             <p><strong>Quick Menu (TradingView):</strong></p>
             <div class='shortcut'>Ctrl + Alt + 1 &rarr; 1 Minute</div>
             <div class='shortcut'>Ctrl + Alt + 2 &rarr; 5 Minutes</div>
@@ -219,28 +232,15 @@ namespace TradingBrowser
         private void ViewModel_RequestNavigate(TabViewModel tab, string url) { try { if (_webViewPool.TryGetValue(tab.Id, out var webView)) { webView.CoreWebView2.Navigate(url); tab.Url = url; } } catch { } }
         private void AddressBox_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { ViewModel.ExecuteNavigate(); e.Handled = true; } }
 
-        // FEATURE: True Chart Mode Mouse Tracking
         private void MainWindow_MouseMove(object sender, MouseEventArgs e)
         {
             if (ViewModel.IsChartMode)
             {
                 double y = e.GetPosition(this).Y;
-                if (y < 5) // Near top edge
-                {
-                    TabStripBorder.Visibility = Visibility.Visible;
-                    AddressBarBorder.Visibility = Visibility.Visible;
-                }
-                else if (y > 80) // Moved away from top
-                {
-                    TabStripBorder.Visibility = Visibility.Collapsed;
-                    AddressBarBorder.Visibility = Visibility.Collapsed;
-                }
+                if (y < 5) { TabStripBorder.Visibility = Visibility.Visible; AddressBarBorder.Visibility = Visibility.Visible; }
+                else if (y > 80) { TabStripBorder.Visibility = Visibility.Collapsed; AddressBarBorder.Visibility = Visibility.Collapsed; }
             }
-            else
-            {
-                TabStripBorder.Visibility = Visibility.Visible;
-                AddressBarBorder.Visibility = Visibility.Visible;
-            }
+            else { TabStripBorder.Visibility = Visibility.Visible; AddressBarBorder.Visibility = Visibility.Visible; }
         }
 
         private void Tab_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) { try { if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab && !tab.IsPinned) { _startPoint = e.GetPosition(null); _draggedTab = tab; } } catch { } }
