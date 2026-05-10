@@ -150,18 +150,30 @@ namespace TradingBrowser
                     webView.CoreWebView2.Navigate(tab.Url);
             }
 
-            // CRITICAL FIX: Use WPF's specific Controller path to pause background tabs
+            // Hide all background tabs (keeps network alive) and mute them
             foreach (var wv in _webViewPool.Values)
             {
-                if (wv.CoreWebView2?.Controller != null)
-                    wv.CoreWebView2.Controller.IsVisible = false;
+                wv.Visibility = Visibility.Hidden;
+                MuteTab(wv, true);
             }
 
+            // Show active tab and unmute it
             if (_webViewPool.TryGetValue(tab.Id, out var targetWebView))
             {
-                if (targetWebView.CoreWebView2?.Controller != null)
-                    targetWebView.CoreWebView2.Controller.IsVisible = true;
+                targetWebView.Visibility = Visibility.Visible;
+                MuteTab(targetWebView, false);
             }
+        }
+
+        // Helper to mute/unmute tabs using Chrome DevTools Protocol
+        private void MuteTab(Microsoft.Web.WebView2.Wpf.WebView2 webView, bool mute)
+        {
+            try
+            {
+                string param = mute ? "{\"muted\":true}" : "{\"muted\":false}";
+                webView.CoreWebView2.CallDevToolsProtocolMethodAsync("Audio.setMuted", param).ConfigureAwait(false);
+            }
+            catch { }
         }
 
         private void LoadHomePage(Microsoft.Web.WebView2.Wpf.WebView2 webView)
