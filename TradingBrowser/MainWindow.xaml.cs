@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -106,8 +105,13 @@ namespace TradingBrowser
                 // FEATURE: Always show website icon in tabs
                 webView.CoreWebView2.FaviconChanged += async (_, _) =>
                 {
-                    try { tab.FaviconUrl = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconFormat.Png); } catch { }
+                    try 
+                    { 
+                        tab.FaviconUrl = await webView.CoreWebView2.GetFaviconAsync(CoreWebView2FaviconImageFormat.Png); 
+                    } 
+                    catch { }
                 };
+                
                 webView.CoreWebView2.SourceChanged += (_, _) =>
                 {
                     if (ViewModel.SelectedTab?.Id == tab.Id) ViewModel.AddressBarText = webView.Source.ToString();
@@ -128,6 +132,7 @@ namespace TradingBrowser
                 _webViewPool[tab.Id] = webView;
             }
 
+            // Hide all, show active (keeps background network alive)
             foreach (var wv in _webViewPool.Values) wv.Visibility = Visibility.Hidden;
             if (_webViewPool.TryGetValue(tab.Id, out var targetWebView)) targetWebView.Visibility = Visibility.Visible;
         }
@@ -181,7 +186,11 @@ namespace TradingBrowser
 
         private void AddressBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter) { ViewModel.ExecuteNavigate(); ((TextBox)sender).MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)); }
+            if (e.Key == Key.Enter) 
+            { 
+                ViewModel.ExecuteNavigate(); 
+                ((TextBox)sender).MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)); 
+            }
         }
 
         // FEATURE: Chrome Keyboard Shortcuts
@@ -190,16 +199,35 @@ namespace TradingBrowser
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.T) { ViewModel.AddTab(); e.Handled = true; }
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.W) { ViewModel.CloseTabCommand.Execute(ViewModel.SelectedTab); e.Handled = true; }
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.L) { ViewModel.FocusAddressBar(); e.Handled = true; }
-            if (Keyboard.Modifiers == ModifierKeys.Control && Keyboard.Modifiers == ModifierKeys.Shift && e.Key == Key.T) { ViewModel.UndoCloseTabCommand.Execute(null); e.Handled = true; }
+            if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.T) { ViewModel.UndoCloseTabCommand.Execute(null); e.Handled = true; }
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.R) { Reload_Click(sender, e); e.Handled = true; }
             if (e.Key == Key.F11) { Maximize_Click(sender, e); e.Handled = true; }
         }
 
-        private void TabStrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed && e.Source is Border) DragMove(); }
-        private void Tab_Click(object sender, MouseButtonEventArgs e) { if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab) ViewModel.SelectedTab = tab; }
-        private void Back_Click(object sender, RoutedEventArgs e) { if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.GoBack(); }
-        private void Forward_Click(object sender, RoutedEventArgs e) { if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.GoForward(); }
-        private void Reload_Click(object sender, RoutedEventArgs e) { if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.Reload(); }
+        private void TabStrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) 
+        { 
+            if (e.LeftButton == MouseButtonState.Pressed && e.Source is Border) DragMove(); 
+        }
+        
+        private void Tab_Click(object sender, MouseButtonEventArgs e) 
+        { 
+            if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab) ViewModel.SelectedTab = tab; 
+        }
+        
+        private void Back_Click(object sender, RoutedEventArgs e) 
+        { 
+            if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.GoBack(); 
+        }
+        
+        private void Forward_Click(object sender, RoutedEventArgs e) 
+        { 
+            if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.GoForward(); 
+        }
+        
+        private void Reload_Click(object sender, RoutedEventArgs e) 
+        { 
+            if (_webViewPool.TryGetValue(ViewModel.SelectedTab?.Id ?? Guid.Empty, out var wv)) wv.CoreWebView2.Reload(); 
+        }
 
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, int lParam);
         private const int WM_SYSCOMMAND = 0x0112, SC_MAXIMIZE = 0xF030, SC_MINIMIZE = 0xF020;
