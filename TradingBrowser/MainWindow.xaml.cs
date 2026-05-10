@@ -37,20 +37,19 @@ namespace TradingBrowser
 
             ViewModel.RequestNavigate += ViewModel_RequestNavigate;
             ViewModel.RequestFocusAddressBar += () => { AddressBox.Focus(); AddressBox.SelectAll(); };
-            ViewModel.TabClosed += ViewModel_TabClosed; // NEW: Listen for tab closes
+            ViewModel.TabClosed += ViewModel_TabClosed;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             _isInitialized = true;
             RestoreSession();
         }
 
-        // NEW: When a tab is closed, completely destroy its WebView2 process to free RAM and stop audio
         private void ViewModel_TabClosed(TabViewModel tab)
         {
             if (_webViewPool.TryGetValue(tab.Id, out var webView))
             {
                 ActiveWebViewHost.Children.Remove(webView);
-                webView.Dispose(); // This kills the background renderer process completely
+                webView.Dispose(); 
                 _webViewPool.Remove(tab.Id);
             }
         }
@@ -151,18 +150,17 @@ namespace TradingBrowser
                     webView.CoreWebView2.Navigate(tab.Url);
             }
 
-            // CRITICAL FIX: Use WebView2's native IsVisible instead of WPF Visibility.
-            // This freezes JS, mutes audio, and saves RAM, BUT keeps the network connection alive!
+            // CRITICAL FIX: Use WPF's specific Controller path to pause background tabs
             foreach (var wv in _webViewPool.Values)
             {
-                if (wv.CoreWebView2Controller != null)
-                    wv.CoreWebView2Controller.IsVisible = false;
+                if (wv.CoreWebView2?.Controller != null)
+                    wv.CoreWebView2.Controller.IsVisible = false;
             }
 
             if (_webViewPool.TryGetValue(tab.Id, out var targetWebView))
             {
-                if (targetWebView.CoreWebView2Controller != null)
-                    targetWebView.CoreWebView2Controller.IsVisible = true;
+                if (targetWebView.CoreWebView2?.Controller != null)
+                    targetWebView.CoreWebView2.Controller.IsVisible = true;
             }
         }
 
