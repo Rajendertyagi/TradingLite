@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
@@ -43,21 +44,31 @@ namespace TradingBrowser
                 return;
             }
 
+            // FIX: Write all errors to a file on the Desktop for easy sharing
             DispatcherUnhandledException += (sender, args) =>
             {
-                MessageBox.Show($"UI Crash Prevented:\n{args.Exception.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                LogError($"UI Thread Error: {args.Exception.ToString()}");
                 args.Handled = true;
             };
 
             AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             {
-                if (args.ExceptionObject is Exception ex)
-                {
-                    MessageBox.Show($"Background Crash Prevented:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
+                string error = args.ExceptionObject?.ToString() ?? "Unknown fatal error";
+                LogError($"Background Thread Error: {error}");
             };
 
             base.OnStartup(e);
+        }
+
+        private void LogError(string message)
+        {
+            try
+            {
+                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string logPath = Path.Combine(desktopPath, "TradingBrowser_Errors.txt");
+                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}]\n{message}\n\n");
+            }
+            catch { }
         }
     }
 }
